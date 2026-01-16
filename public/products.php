@@ -16,6 +16,8 @@ $filters = [
     'category' => $_GET['category'] ?? '',
     'search' => $_GET['search'] ?? '',
     'sort' => $_GET['sort'] ?? ProductService::SORT_NEWEST,
+    'min_price' => isset($_GET['min_price']) && is_numeric($_GET['min_price']) ? (float)$_GET['min_price'] : null,
+    'max_price' => isset($_GET['max_price']) && is_numeric($_GET['max_price']) ? (float)$_GET['max_price'] : null,
     'page' => max(1, (int)($_GET['page'] ?? 1)),
     'limit' => 12
 ];
@@ -45,6 +47,8 @@ $search = $filters['search'];
 $sort = $filters['sort'];
 $page = $filters['page'];
 $limit = $filters['limit'];
+$min_price = $filters['min_price'];
+$max_price = $filters['max_price'];
 
 include 'includes/header.php'; 
 ?>
@@ -169,19 +173,47 @@ include 'includes/header.php';
                 <div class="flex flex-col gap-3">
                     <div class="flex justify-between items-center">
                         <h4 class="text-sm font-bold">Khoảng giá</h4>
-                        <span class="text-xs text-primary font-medium cursor-pointer">Reset</span>
+                        <span class="text-xs text-primary font-medium cursor-pointer" id="resetPrice">Reset</span>
                     </div>
                     <div class="bg-white dark:bg-[#1e2b24] rounded-xl border border-[#e9f2ec] dark:border-gray-800 p-4">
-                        <div class="relative h-10 w-full flex items-center">
-                            <div class="h-1.5 w-full bg-[#d2e4da] dark:bg-gray-700 rounded-full">
-                                <div class="absolute h-1.5 bg-primary rounded-full left-[20%] right-[30%]"></div>
+                        <!-- Range Slider -->
+                        <div class="mb-6">
+                            <div class="relative h-2 mb-4">
+                                <!-- Background track -->
+                                <div class="absolute w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-full"></div>
+                                <!-- Active track -->
+                                <div id="priceSliderTrack" class="absolute h-2 bg-primary rounded-full"></div>
+                                <!-- Min thumb -->
+                                <input type="range" 
+                                       id="minPriceSlider"
+                                       min="0" 
+                                       max="5000000" 
+                                       value="<?= $min_price ?? 0 ?>" 
+                                       step="10000"
+                                       class="absolute w-full h-2 bg-transparent appearance-none pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:hover:scale-110 [&::-webkit-slider-thumb]:transition-transform [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-primary [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:shadow-md">
+                                <!-- Max thumb -->
+                                <input type="range" 
+                                       id="maxPriceSlider"
+                                       min="0" 
+                                       max="5000000" 
+                                       value="<?= $max_price ?? 5000000 ?>" 
+                                       step="10000"
+                                       class="absolute w-full h-2 bg-transparent appearance-none pointer-events-none [&::-webkit-slider-thumb]:pointer-events-auto [&::-webkit-slider-thumb]:appearance-none [&::-webkit-slider-thumb]:w-5 [&::-webkit-slider-thumb]:h-5 [&::-webkit-slider-thumb]:rounded-full [&::-webkit-slider-thumb]:bg-white [&::-webkit-slider-thumb]:border-2 [&::-webkit-slider-thumb]:border-primary [&::-webkit-slider-thumb]:cursor-pointer [&::-webkit-slider-thumb]:shadow-md [&::-webkit-slider-thumb]:hover:scale-110 [&::-webkit-slider-thumb]:transition-transform [&::-moz-range-thumb]:pointer-events-auto [&::-moz-range-thumb]:appearance-none [&::-moz-range-thumb]:w-5 [&::-moz-range-thumb]:h-5 [&::-moz-range-thumb]:rounded-full [&::-moz-range-thumb]:bg-white [&::-moz-range-thumb]:border-2 [&::-moz-range-thumb]:border-primary [&::-moz-range-thumb]:cursor-pointer [&::-moz-range-thumb]:shadow-md">
                             </div>
-                            <div class="absolute left-[20%] -ml-2 size-5 bg-white border-2 border-primary rounded-full shadow cursor-pointer hover:scale-110 transition-transform"></div>
-                            <div class="absolute right-[30%] -mr-2 size-5 bg-white border-2 border-primary rounded-full shadow cursor-pointer hover:scale-110 transition-transform"></div>
-                        </div>
-                        <div class="flex justify-between text-xs font-semibold text-text-main dark:text-gray-300 mt-2">
-                            <span>150k</span>
-                            <span>1.2tr</span>
+                            
+                            <!-- Price display -->
+                            <div class="flex justify-between items-center text-sm font-semibold text-text-main dark:text-gray-300 mb-4">
+                                <span id="minPriceDisplay">0đ</span>
+                                <span class="text-xs text-gray-400">-</span>
+                                <span id="maxPriceDisplay">5tr</span>
+                            </div>
+                            
+                            <!-- Apply button -->
+                            <button type="button" 
+                                    id="applyPriceFilter"
+                                    class="w-full px-4 py-2.5 bg-primary text-white rounded-lg text-sm font-semibold hover:bg-primary-dark transition-colors shadow-sm">
+                                Áp dụng lọc giá
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -295,7 +327,22 @@ include 'includes/header.php';
                 <!-- Pagination -->
                 <?php if (!empty($products) && count($products) >= $limit): ?>
                 <div class="mt-12 flex justify-center">
-                    <a href="/products.php?page=<?= ($page + 1) . (!empty($category_filter) ? '&category=' . $category_filter : '') . (!empty($search) ? '&search=' . urlencode($search) : '') ?>" 
+                    <?php
+                    $paginationParams = [
+                        'page' => $page + 1,
+                        'category' => $category_filter,
+                        'search' => $search,
+                        'sort' => $sort,
+                        'min_price' => $min_price,
+                        'max_price' => $max_price
+                    ];
+                    // Remove empty params
+                    $paginationParams = array_filter($paginationParams, function($value) {
+                        return !empty($value) || $value === 0;
+                    });
+                    $paginationQuery = http_build_query($paginationParams);
+                    ?>
+                    <a href="/products.php?<?= $paginationQuery ?>" 
                        class="px-8 py-3 rounded-full bg-white dark:bg-[#1e2b24] border border-[#e9f2ec] dark:border-gray-700 text-text-main dark:text-white font-bold hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 shadow-sm flex items-center gap-2">
                         Xem thêm sản phẩm
                         <span class="material-symbols-outlined">expand_more</span>
@@ -306,5 +353,99 @@ include 'includes/header.php';
         </div>
     </div>
 </main>
+
+<script>
+// Price Range Slider Handler
+document.addEventListener('DOMContentLoaded', function() {
+    const minSlider = document.getElementById('minPriceSlider');
+    const maxSlider = document.getElementById('maxPriceSlider');
+    const minDisplay = document.getElementById('minPriceDisplay');
+    const maxDisplay = document.getElementById('maxPriceDisplay');
+    const sliderTrack = document.getElementById('priceSliderTrack');
+    const applyButton = document.getElementById('applyPriceFilter');
+    const resetButton = document.getElementById('resetPrice');
+    
+    const MIN = 0;
+    const MAX = 5000000;
+    
+    // Format currency
+    function formatPrice(price) {
+        if (price >= 1000000) {
+            return (price / 1000000).toFixed(price % 1000000 === 0 ? 0 : 1) + 'tr';
+        } else if (price >= 1000) {
+            return (price / 1000).toFixed(0) + 'k';
+        }
+        return price + 'đ';
+    }
+    
+    // Update slider track position
+    function updateTrack() {
+        const minVal = parseInt(minSlider.value);
+        const maxVal = parseInt(maxSlider.value);
+        
+        // Prevent overlap
+        if (minVal >= maxVal) {
+            if (this === minSlider) {
+                minSlider.value = maxVal - 10000;
+            } else {
+                maxSlider.value = minVal + 10000;
+            }
+        }
+        
+        const minPercent = (minSlider.value / MAX) * 100;
+        const maxPercent = (maxSlider.value / MAX) * 100;
+        
+        sliderTrack.style.left = minPercent + '%';
+        sliderTrack.style.width = (maxPercent - minPercent) + '%';
+        
+        minDisplay.textContent = formatPrice(parseInt(minSlider.value));
+        maxDisplay.textContent = formatPrice(parseInt(maxSlider.value));
+    }
+    
+    // Initialize
+    updateTrack();
+    
+    // Event listeners
+    minSlider.addEventListener('input', updateTrack);
+    maxSlider.addEventListener('input', updateTrack);
+    
+    // Apply filter
+    applyButton.addEventListener('click', function() {
+        const minPrice = parseInt(minSlider.value);
+        const maxPrice = parseInt(maxSlider.value);
+        
+        const url = new URL(window.location.href);
+        const params = new URLSearchParams(url.search);
+        
+        if (minPrice > 0) {
+            params.set('min_price', minPrice);
+        } else {
+            params.delete('min_price');
+        }
+        
+        if (maxPrice < MAX) {
+            params.set('max_price', maxPrice);
+        } else {
+            params.delete('max_price');
+        }
+        
+        params.set('page', '1');
+        
+        window.location.href = url.pathname + '?' + params.toString();
+    });
+    
+    // Reset filter
+    resetButton.addEventListener('click', function() {
+        const url = new URL(window.location.href);
+        const params = new URLSearchParams(url.search);
+        
+        params.delete('min_price');
+        params.delete('max_price');
+        params.set('page', '1');
+        
+        window.location.href = url.pathname + (params.toString() ? '?' + params.toString() : '');
+    });
+});
+</script>
 
 <?php include 'includes/footer.php'; ?>

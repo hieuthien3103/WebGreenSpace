@@ -68,19 +68,25 @@ WebGreenSpace/
 │   └── views/          # View templates
 ├── config/             # Configuration files
 ├── database/           # Database schemas and migrations
+├── docs/               # Documentation files
 ├── helpers/            # Helper functions
 ├── public/             # Public web root
+│   ├── admin/         # Admin tools
 │   ├── css/           # Stylesheets
 │   ├── js/            # JavaScript files
 │   ├── images/        # Static images
+│   ├── includes/      # Shared templates
 │   └── index.php      # Entry point
+├── tests/              # Test files
 └── uploads/            # User uploaded files
 ```
 
 ## Documentation
 
-- [Refactoring Guide](REFACTORING_GUIDE.md) - Detailed refactoring documentation
-- [Summary](REFACTORING_SUMMARY.md) - Quick overview of changes
+- [Refactoring Guide](docs/REFACTORING_GUIDE.md) - Detailed refactoring documentation
+- [Summary](docs/REFACTORING_SUMMARY.md) - Quick overview of changes
+- [Products Guide](docs/PRODUCTS_GUIDE.md) - Product management guide
+- [Image Upload Guide](docs/IMAGE_UPLOAD_GUIDE.md) - Image handling guide
 
 ## Development
 

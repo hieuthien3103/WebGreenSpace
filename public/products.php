@@ -74,7 +74,7 @@ include 'includes/header.php';
             <!-- Search and Sort -->
             <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                 <!-- Search Box -->
-                <form method="GET" action="<?= base_url('public/products.php') ?>" class="relative">
+                <form method="GET" action="/products.php" class="relative">
                     <input type="text" 
                            name="search" 
                            value="<?= clean($search) ?>" 
@@ -122,13 +122,13 @@ include 'includes/header.php';
                                 <span class="material-symbols-outlined text-lg transition-transform duration-200 group-open:rotate-180">expand_more</span>
                             </summary>
                             <div class="px-4 pb-4 pt-0 text-sm space-y-2 text-text-secondary">
-                                <a href="<?= base_url('public/products.php') ?>" class="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors py-1 <?= empty($category_filter) ? 'text-primary font-semibold' : '' ?>">
+                                <a href="/products.php" class="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors py-1 <?= empty($category_filter) ? 'text-primary font-semibold' : '' ?>">
                                     <span class="material-symbols-outlined text-[18px]"><?= empty($category_filter) ? 'radio_button_checked' : 'radio_button_unchecked' ?></span>
                                     Tất cả sản phẩm
                                 </a>
                                 <?php if (!empty($categories)): ?>
                                     <?php foreach ($categories as $cat): ?>
-                                        <a href="<?= base_url('public/products.php?category=' . $cat['slug']) ?>" 
+                                        <a href="/products.php?category=<?= $cat['slug'] ?>" 
                                            class="flex items-center gap-3 cursor-pointer hover:text-primary transition-colors py-1 <?= $category_filter == $cat['slug'] ? 'text-primary font-semibold' : '' ?>">
                                             <span class="material-symbols-outlined text-[18px]"><?= $category_filter == $cat['slug'] ? 'radio_button_checked' : 'radio_button_unchecked' ?></span>
                                             <?= clean($cat['name']) ?>
@@ -226,7 +226,7 @@ include 'includes/header.php';
                             </div>
                             <?php endif; ?>
                             
-                            <a href="<?= base_url('public/product-detail.php?slug=' . $product['slug']) ?>" class="relative w-full aspect-[4/5] overflow-hidden bg-gray-100 dark:bg-gray-800">
+                            <a href="/product-detail.php?slug=<?= $product['slug'] ?>" class="relative w-full aspect-[4/5] overflow-hidden bg-gray-100 dark:bg-gray-800">
                                 <img alt="<?= clean($product['name']) ?>" class="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" src="<?= $product['image_url'] ?? image_url('products/default.jpg') ?>"/>
                                 
                                 <!-- Quick Action Overlay -->
@@ -243,7 +243,7 @@ include 'includes/header.php';
                             <div class="p-5 flex flex-col flex-1">
                                 <div class="flex justify-between items-start mb-2">
                                     <h3 class="text-lg font-bold text-text-main dark:text-white group-hover:text-primary transition-colors flex-1">
-                                        <a href="<?= base_url('public/product-detail.php?slug=' . $product['slug']) ?>">
+                                        <a href="/product-detail.php?slug=<?= $product['slug'] ?>">
                                             <?= clean($product['name']) ?>
                                         </a>
                                     </h3>
@@ -283,7 +283,7 @@ include 'includes/header.php';
                             <p class="text-text-secondary text-lg mb-2">Không tìm thấy sản phẩm nào</p>
                             <?php if (!empty($search)): ?>
                                 <p class="text-sm text-text-secondary mb-4">Thử tìm kiếm với từ khóa khác</p>
-                                <a href="<?= base_url('public/products.php') ?>" class="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-full hover:bg-primary-dark transition-colors">
+                                <a href="/products.php" class="inline-flex items-center gap-2 px-6 py-3 bg-primary text-white rounded-full hover:bg-primary-dark transition-colors">
                                     <span class="material-symbols-outlined text-[20px]">refresh</span>
                                     Xem tất cả sản phẩm
                                 </a>
@@ -295,7 +295,7 @@ include 'includes/header.php';
                 <!-- Pagination -->
                 <?php if (!empty($products) && count($products) >= $limit): ?>
                 <div class="mt-12 flex justify-center">
-                    <a href="<?= base_url('public/products.php?page=' . ($page + 1) . (!empty($category_filter) ? '&category=' . $category_filter : '') . (!empty($search) ? '&search=' . urlencode($search) : '')) ?>" 
+                    <a href="/products.php?page=<?= ($page + 1) . (!empty($category_filter) ? '&category=' . $category_filter : '') . (!empty($search) ? '&search=' . urlencode($search) : '') ?>" 
                        class="px-8 py-3 rounded-full bg-white dark:bg-[#1e2b24] border border-[#e9f2ec] dark:border-gray-700 text-text-main dark:text-white font-bold hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 shadow-sm flex items-center gap-2">
                         Xem thêm sản phẩm
                         <span class="material-symbols-outlined">expand_more</span>

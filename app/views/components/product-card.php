@@ -1,14 +1,19 @@
 <!-- Product Card Component -->
 <div class="group relative flex flex-col rounded-2xl bg-background-light p-4 transition-all hover:shadow-lg dark:bg-background-dark">
     <div class="relative mb-4 aspect-[4/5] w-full overflow-hidden rounded-xl bg-gray-100">
-        <div class="h-full w-full bg-cover bg-center transition-transform duration-500 group-hover:scale-110" 
-             style="background-image: url('<?= $product['image_url'] ?? image_url('products/default.jpg') ?>');">
-        </div>
+        <img src="<?= $product['image_url'] ?? image_url('products/default.jpg') ?>" 
+             alt="<?= clean($product['name']) ?>"
+             class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110">
         
-        <!-- Wishlist Button -->
-        <button class="absolute right-3 top-3 flex size-8 items-center justify-center rounded-full bg-white/80 text-text-main opacity-0 backdrop-blur-sm transition-opacity hover:bg-white group-hover:opacity-100">
-            <span class="material-symbols-outlined text-sm">favorite</span>
-        </button>
+        <!-- Hover Overlay with Actions -->
+        <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
+            <button class="size-10 rounded-full bg-white text-text-main flex items-center justify-center hover:bg-primary hover:text-white transition-colors shadow-lg transform translate-y-4 group-hover:translate-y-0 duration-300" title="Xem nhanh">
+                <span class="material-symbols-outlined text-[20px]">visibility</span>
+            </button>
+            <button class="size-10 rounded-full bg-white text-text-main flex items-center justify-center hover:bg-primary hover:text-white transition-colors shadow-lg transform translate-y-4 group-hover:translate-y-0 duration-300 delay-75" title="Yêu thích">
+                <span class="material-symbols-outlined text-[20px]">favorite</span>
+            </button>
+        </div>
         
         <!-- Sale Badge -->
         <?php if (isset($product['sale_price']) && $product['sale_price'] > 0): 

@@ -53,14 +53,14 @@
     <div class="mx-auto flex h-20 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         <!-- Logo & Nav -->
         <div class="flex items-center gap-10">
-            <a class="flex items-center gap-3" href="demo.php">
+            <a class="flex items-center gap-3" href="home.php">
                 <div class="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
                     <span class="material-symbols-outlined text-3xl">potted_plant</span>
                 </div>
                 <h1 class="text-xl font-bold tracking-tight text-text-main dark:text-white">GreenSpace</h1>
             </a>
             <nav class="hidden md:flex items-center gap-8">
-                <a class="text-sm font-medium <?php echo (isset($currentPage) && $currentPage == 'home') ? 'text-text-main' : 'text-text-secondary'; ?> hover:text-primary dark:text-gray-200 dark:hover:text-primary transition-colors" href="demo.php">Trang chủ</a>
+                <a class="text-sm font-medium <?php echo (isset($currentPage) && $currentPage == 'home') ? 'text-text-main' : 'text-text-secondary'; ?> hover:text-primary dark:text-gray-200 dark:hover:text-primary transition-colors" href="home.php">Trang chủ</a>
                 <a class="text-sm font-medium <?php echo (isset($currentPage) && $currentPage == 'products') ? 'text-text-main' : 'text-text-secondary'; ?> hover:text-primary dark:text-gray-400 dark:hover:text-primary transition-colors" href="products.php">Sản phẩm</a>
                 <a class="text-sm font-medium <?php echo (isset($currentPage) && $currentPage == 'care') ? 'text-text-main' : 'text-text-secondary'; ?> hover:text-primary dark:text-gray-400 dark:hover:text-primary transition-colors" href="care.php">Chăm sóc cây</a>
                 <a class="text-sm font-medium <?php echo (isset($currentPage) && $currentPage == 'contact') ? 'text-text-main' : 'text-text-secondary'; ?> hover:text-primary dark:text-gray-400 dark:hover:text-primary transition-colors" href="contact.php">Liên hệ</a>

@@ -9,7 +9,7 @@ class Product {
     private string $table = 'products';
     
     // Query select fields
-    private const SELECT_FIELDS = "p.*, c.name as category_name, c.slug as category_slug, p.thumbnail_url as image_path, p.old_price as sale_price";
+    private const SELECT_FIELDS = "p.*, c.name as category_name, c.slug as category_slug";
 
     public function __construct() {
         $db = new Database();
@@ -153,6 +153,70 @@ class Product {
         $stmt->bindParam(':keyword', $keyword, PDO::PARAM_STR);
         $stmt->bindParam(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindParam(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+        
+        return $this->formatProducts($stmt->fetchAll());
+    }
+
+    /**
+     * Get filtered products with advanced filters
+     * 
+     * @param array $filters Filter parameters
+     * @param int $limit Maximum number of products
+     * @param int $offset Starting position
+     * @return array Products list
+     */
+    public function getFilteredProducts(array $filters = [], int $limit = 12, int $offset = 0): array {
+        $whereClauses = [];
+        $params = [];
+        
+        // Price range filter
+        if (isset($filters['min_price']) && is_numeric($filters['min_price'])) {
+            $whereClauses[] = "p.price >= :min_price";
+            $params[':min_price'] = (float)$filters['min_price'];
+        }
+        
+        if (isset($filters['max_price']) && is_numeric($filters['max_price'])) {
+            $whereClauses[] = "p.price <= :max_price";
+            $params[':max_price'] = (float)$filters['max_price'];
+        }
+        
+        // Category filter
+        if (!empty($filters['category_id'])) {
+            $whereClauses[] = "p.category_id = :category_id";
+            $params[':category_id'] = (int)$filters['category_id'];
+        }
+        
+        // Search filter
+        if (!empty($filters['search'])) {
+            $whereClauses[] = "(p.name LIKE :search OR p.short_description LIKE :search OR p.long_description LIKE :search)";
+            $params[':search'] = "%{$filters['search']}%";
+        }
+        
+        // Build WHERE clause
+        $whereSQL = !empty($whereClauses) ? "WHERE " . implode(" AND ", $whereClauses) : "";
+        
+        $query = "SELECT " . self::SELECT_FIELDS . "
+                  FROM {$this->table} p
+                  LEFT JOIN categories c ON p.category_id = c.id
+                  {$whereSQL}
+                  ORDER BY p.created_at DESC
+                  LIMIT :limit OFFSET :offset";
+        
+        $stmt = $this->conn->prepare($query);
+        
+        // Bind filter params
+        foreach ($params as $key => $value) {
+            if (is_int($value)) {
+                $stmt->bindValue($key, $value, PDO::PARAM_INT);
+            } else {
+                $stmt->bindValue($key, $value, PDO::PARAM_STR);
+            }
+        }
+        
+        // Bind limit and offset
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
         
         return $this->formatProducts($stmt->fetchAll());

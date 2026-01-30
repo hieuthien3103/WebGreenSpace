@@ -32,21 +32,51 @@ class ProductService {
         $page = max(1, (int)($filters['page'] ?? 1));
         $limit = (int)($filters['limit'] ?? 12);
         $offset = ($page - 1) * $limit;
+        $minPrice = $filters['min_price'] ?? null;
+        $maxPrice = $filters['max_price'] ?? null;
         
         $categoryData = null;
         $products = [];
         
         try {
-            // Get products based on filters
-            if (!empty($search)) {
-                $products = $this->productModel->search($search, $limit, $offset);
-            } elseif (!empty($category)) {
-                $categoryData = $this->categoryModel->getBySlug($category);
-                if ($categoryData) {
-                    $products = $this->productModel->getByCategory($categoryData['id'], $limit, $offset);
+            // Check if we have price filters or multiple filters
+            $hasAdvancedFilters = !empty($minPrice) || !empty($maxPrice) || !empty($search);
+            
+            if ($hasAdvancedFilters) {
+                // Use advanced filter method
+                $filterParams = [];
+                
+                if (!empty($search)) {
+                    $filterParams['search'] = $search;
                 }
+                
+                if (!empty($category)) {
+                    $categoryData = $this->categoryModel->getBySlug($category);
+                    if ($categoryData) {
+                        $filterParams['category_id'] = $categoryData['id'];
+                    }
+                }
+                
+                if (!empty($minPrice)) {
+                    $filterParams['min_price'] = $minPrice;
+                }
+                
+                if (!empty($maxPrice)) {
+                    $filterParams['max_price'] = $maxPrice;
+                }
+                
+                $products = $this->productModel->getFilteredProducts($filterParams, $limit, $offset);
+                
             } else {
-                $products = $this->productModel->getAll($limit, $offset);
+                // Use simple methods for single filters
+                if (!empty($category)) {
+                    $categoryData = $this->categoryModel->getBySlug($category);
+                    if ($categoryData) {
+                        $products = $this->productModel->getByCategory($categoryData['id'], $limit, $offset);
+                    }
+                } else {
+                    $products = $this->productModel->getAll($limit, $offset);
+                }
             }
             
             // Apply sorting

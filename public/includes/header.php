@@ -69,13 +69,13 @@
         <!-- Actions -->
         <div class="flex items-center gap-4">
             <!-- Search Bar (Desktop) -->
-            <div class="hidden lg:flex w-64 items-center rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] px-4 py-2">
+            <form action="products.php" method="GET" class="hidden lg:flex w-64 items-center rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] px-4 py-2">
                 <span class="material-symbols-outlined text-text-secondary">search</span>
-                <input class="ml-2 w-full bg-transparent border-none p-0 text-sm focus:ring-0 placeholder:text-text-secondary dark:text-white" placeholder="Tìm kiếm..." type="text"/>
-            </div>
+                <input id="headerSearchInput" name="search" class="ml-2 w-full bg-transparent border-none p-0 text-sm focus:ring-0 placeholder:text-text-secondary dark:text-white" placeholder="Tìm kiếm sản phẩm..." type="text" autocomplete="off"/>
+            </form>
             <!-- Icons -->
             <div class="flex items-center gap-2">
-                <button class="flex size-10 items-center justify-center rounded-full hover:bg-[#e9f2ec] dark:hover:bg-[#1f2e25] transition-colors lg:hidden">
+                <button onclick="toggleMobileSearch()" class="flex size-10 items-center justify-center rounded-full hover:bg-[#e9f2ec] dark:hover:bg-[#1f2e25] transition-colors lg:hidden">
                     <span class="material-symbols-outlined text-text-main dark:text-white">search</span>
                 </button>
                 <button class="flex size-10 items-center justify-center rounded-full hover:bg-[#e9f2ec] dark:hover:bg-[#1f2e25] transition-colors">
@@ -89,3 +89,64 @@
         </div>
     </div>
 </header>
+
+<!-- Mobile Search Modal -->
+<div id="mobileSearchModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
+    <div class="flex min-h-full items-start justify-center p-4 pt-20">
+        <div class="w-full max-w-2xl bg-white dark:bg-[#1e2b24] rounded-2xl shadow-2xl overflow-hidden">
+            <div class="p-6">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-text-main dark:text-white">Tìm kiếm sản phẩm</h3>
+                    <button onclick="toggleMobileSearch()" class="flex size-10 items-center justify-center rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+                        <span class="material-symbols-outlined text-text-main dark:text-white">close</span>
+                    </button>
+                </div>
+                <form action="products.php" method="GET" class="relative">
+                    <input id="mobileSearchInput" name="search" type="text" placeholder="Nhập tên sản phẩm..." class="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-[#e9f2ec] dark:border-gray-700 bg-white dark:bg-[#131f18] text-text-main dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 text-lg" autocomplete="off" />
+                    <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary text-2xl">search</span>
+                </form>
+                <div class="mt-6">
+                    <p class="text-sm text-text-secondary dark:text-gray-400 mb-3">Gợi ý tìm kiếm:</p>
+                    <div class="flex flex-wrap gap-2">
+                        <a href="products.php?search=cây+cảnh" class="px-4 py-2 rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] text-sm text-text-main dark:text-white hover:bg-primary hover:text-white transition-colors">Cây cảnh</a>
+                        <a href="products.php?search=sen+đá" class="px-4 py-2 rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] text-sm text-text-main dark:text-white hover:bg-primary hover:text-white transition-colors">Sen đá</a>
+                        <a href="products.php?search=trầu+bà" class="px-4 py-2 rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] text-sm text-text-main dark:text-white hover:bg-primary hover:text-white transition-colors">Trầu bà</a>
+                        <a href="products.php?search=xương+rồng" class="px-4 py-2 rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] text-sm text-text-main dark:text-white hover:bg-primary hover:text-white transition-colors">Xương rồng</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Toggle mobile search modal
+function toggleMobileSearch() {
+    const modal = document.getElementById('mobileSearchModal');
+    if (modal.classList.contains('hidden')) {
+        modal.classList.remove('hidden');
+        document.getElementById('mobileSearchInput').focus();
+        document.body.style.overflow = 'hidden';
+    } else {
+        modal.classList.add('hidden');
+        document.body.style.overflow = '';
+    }
+}
+
+// Close modal when clicking outside
+document.getElementById('mobileSearchModal')?.addEventListener('click', function(e) {
+    if (e.target === this) {
+        toggleMobileSearch();
+    }
+});
+
+// Close modal on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const modal = document.getElementById('mobileSearchModal');
+        if (!modal.classList.contains('hidden')) {
+            toggleMobileSearch();
+        }
+    }
+});
+</script>

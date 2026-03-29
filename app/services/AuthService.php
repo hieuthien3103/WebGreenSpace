@@ -18,11 +18,11 @@ class AuthService {
         $errors = [];
 
         if ($identifier === '') {
-            $errors['identifier'] = 'Vui long nhap email hoac ten dang nhap.';
+            $errors['identifier'] = 'Vui lòng nhập email hoặc tên đăng nhập.';
         }
 
         if ($password === '') {
-            $errors['password'] = 'Vui long nhap mat khau.';
+            $errors['password'] = 'Vui lòng nhập mật khẩu.';
         }
 
         if (!empty($errors)) {
@@ -31,15 +31,15 @@ class AuthService {
 
         $user = $this->userModel->findByLogin($identifier);
         if (!$user) {
-            return ['success' => false, 'errors' => ['general' => 'Thong tin dang nhap khong dung.']];
+            return ['success' => false, 'errors' => ['general' => 'Thông tin đăng nhập không đúng.']];
         }
 
         if (($user['status'] ?? 'inactive') !== 'active') {
-            return ['success' => false, 'errors' => ['general' => 'Tai khoan hien khong kha dung.']];
+            return ['success' => false, 'errors' => ['general' => 'Tài khoản hiện không khả dụng.']];
         }
 
         if (!password_verify($password, $user['password'] ?? '')) {
-            return ['success' => false, 'errors' => ['general' => 'Thong tin dang nhap khong dung.']];
+            return ['success' => false, 'errors' => ['general' => 'Thông tin đăng nhập không đúng.']];
         }
 
         if (password_needs_rehash($user['password'], HASH_ALGO, ['cost' => HASH_COST])) {
@@ -85,7 +85,7 @@ class AuthService {
 
         $user = $this->userModel->findById($userId);
         if (!$user) {
-            return ['success' => false, 'errors' => ['general' => 'Khong the tao tai khoan luc nay.']];
+            return ['success' => false, 'errors' => ['general' => 'Không thể tạo tài khoản lúc này.']];
         }
 
         $this->storeSession($user);
@@ -117,41 +117,41 @@ class AuthService {
         $errors = [];
 
         if ($input['full_name'] === '') {
-            $errors['full_name'] = 'Vui long nhap ho ten.';
+            $errors['full_name'] = 'Vui lòng nhập họ tên.';
         } elseif (mb_strlen($input['full_name']) < 2) {
-            $errors['full_name'] = 'Ho ten can it nhat 2 ky tu.';
+            $errors['full_name'] = 'Họ tên cần ít nhất 2 ký tự.';
         }
 
         if ($input['username'] === '') {
-            $errors['username'] = 'Vui long nhap ten dang nhap.';
+            $errors['username'] = 'Vui lòng nhập tên đăng nhập.';
         } elseif (!preg_match('/^[a-zA-Z0-9_]{4,30}$/', $input['username'])) {
-            $errors['username'] = 'Ten dang nhap gom 4-30 ky tu, chi dung chu, so hoac dau gach duoi.';
+            $errors['username'] = 'Tên đăng nhập gồm 4-30 ký tự, chỉ dùng chữ, số hoặc dấu gạch dưới.';
         } elseif ($this->userModel->findByUsername($input['username'])) {
-            $errors['username'] = 'Ten dang nhap da ton tai.';
+            $errors['username'] = 'Tên đăng nhập đã tồn tại.';
         }
 
         if ($input['email'] === '') {
-            $errors['email'] = 'Vui long nhap email.';
+            $errors['email'] = 'Vui lòng nhập email.';
         } elseif (!is_valid_email($input['email'])) {
-            $errors['email'] = 'Email khong hop le.';
+            $errors['email'] = 'Email không hợp lệ.';
         } elseif ($this->userModel->findByEmail($input['email'])) {
-            $errors['email'] = 'Email da duoc su dung.';
+            $errors['email'] = 'Email đã được sử dụng.';
         }
 
         if ($input['phone'] !== '' && !preg_match('/^[0-9+\s.-]{8,20}$/', $input['phone'])) {
-            $errors['phone'] = 'So dien thoai khong hop le.';
+            $errors['phone'] = 'Số điện thoại không hợp lệ.';
         }
 
         if ($input['password'] === '') {
-            $errors['password'] = 'Vui long nhap mat khau.';
+            $errors['password'] = 'Vui lòng nhập mật khẩu.';
         } elseif (strlen($input['password']) < 6) {
-            $errors['password'] = 'Mat khau can it nhat 6 ky tu.';
+            $errors['password'] = 'Mật khẩu cần ít nhất 6 ký tự.';
         }
 
         if ($input['confirm_password'] === '') {
-            $errors['confirm_password'] = 'Vui long nhap lai mat khau.';
+            $errors['confirm_password'] = 'Vui lòng nhập lại mật khẩu.';
         } elseif ($input['password'] !== $input['confirm_password']) {
-            $errors['confirm_password'] = 'Mat khau nhap lai khong khop.';
+            $errors['confirm_password'] = 'Mật khẩu nhập lại không khớp.';
         }
 
         return $errors;

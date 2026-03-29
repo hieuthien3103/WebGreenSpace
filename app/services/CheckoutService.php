@@ -22,12 +22,12 @@ class CheckoutService {
     public function placeOrder(int $userId, array $data): array {
         $user = $this->userModel->findById($userId);
         if (!$user) {
-            return ['success' => false, 'errors' => ['general' => 'Khong tim thay tai khoan.']];
+            return ['success' => false, 'errors' => ['general' => 'Không tìm thấy tài khoản.']];
         }
 
         $summary = $this->cartService->getSummary();
         if (empty($summary['items'])) {
-            return ['success' => false, 'errors' => ['general' => 'Gio hang dang trong.']];
+            return ['success' => false, 'errors' => ['general' => 'Giỏ hàng đang trống.']];
         }
 
         $payload = [
@@ -102,7 +102,7 @@ class CheckoutService {
                 'status' => $isOnlineMock ? 'paid' : 'unpaid',
                 'amount' => $summary['total'],
                 'paid_at' => $isOnlineMock ? date('Y-m-d H:i:s') : null,
-                'note' => $isOnlineMock ? 'Mock online payment completed.' : 'Thanh toan khi nhan hang.',
+                'note' => $isOnlineMock ? 'Mock online payment completed.' : 'Thanh toán khi nhận hàng.',
             ]);
 
             $conn->commit();
@@ -120,7 +120,7 @@ class CheckoutService {
             }
 
             error_log('CheckoutService Error: ' . $e->getMessage());
-            return ['success' => false, 'errors' => ['general' => 'Khong the tao don hang luc nay.']];
+            return ['success' => false, 'errors' => ['general' => 'Không thể tạo đơn hàng lúc này.']];
         }
     }
 
@@ -131,33 +131,33 @@ class CheckoutService {
         $errors = [];
 
         if ($payload['full_name'] === '') {
-            $errors['full_name'] = 'Vui long nhap ho ten nguoi nhan.';
+            $errors['full_name'] = 'Vui lòng nhập họ tên người nhận.';
         }
 
         if ($payload['email'] === '') {
-            $errors['email'] = 'Vui long nhap email.';
+            $errors['email'] = 'Vui lòng nhập email.';
         } elseif (!is_valid_email($payload['email'])) {
-            $errors['email'] = 'Email khong hop le.';
+            $errors['email'] = 'Email không hợp lệ.';
         }
 
         if ($payload['phone'] === '') {
-            $errors['phone'] = 'Vui long nhap so dien thoai.';
+            $errors['phone'] = 'Vui lòng nhập số điện thoại.';
         }
 
         if ($payload['province'] === '') {
-            $errors['province'] = 'Vui long nhap tinh/thanh.';
+            $errors['province'] = 'Vui lòng nhập tỉnh/thành.';
         }
 
         if ($payload['district'] === '') {
-            $errors['district'] = 'Vui long nhap quan/huyen.';
+            $errors['district'] = 'Vui lòng nhập quận/huyện.';
         }
 
         if ($payload['address_line'] === '') {
-            $errors['address_line'] = 'Vui long nhap dia chi cu the.';
+            $errors['address_line'] = 'Vui lòng nhập địa chỉ cụ thể.';
         }
 
         if (!in_array($payload['payment_method'], ['cod', 'online_mock'], true)) {
-            $errors['payment_method'] = 'Phuong thuc thanh toan khong hop le.';
+            $errors['payment_method'] = 'Phương thức thanh toán không hợp lệ.';
         }
 
         return $errors;

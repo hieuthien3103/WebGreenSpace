@@ -85,7 +85,7 @@ $cartCount = cart_item_count();
                     <span class="material-symbols-outlined text-text-main dark:text-white">search</span>
                 </button>
                 <?php if ($currentUser): ?>
-                    <a href="profile.php" class="flex size-10 items-center justify-center rounded-full hover:bg-[#e9f2ec] dark:hover:bg-[#1f2e25] transition-colors" title="<?= clean($currentUserName ?? 'Tài khoản') ?>">
+                    <a href="<?= is_admin() ? 'admin/dashboard.php' : 'profile.php' ?>" class="flex size-10 items-center justify-center rounded-full hover:bg-[#e9f2ec] dark:hover:bg-[#1f2e25] transition-colors" title="<?= clean($currentUserName ?? 'Tài khoản') ?>">
                         <span class="material-symbols-outlined text-text-main dark:text-white">person</span>
                     </a>
                     <form action="logout.php" method="POST">

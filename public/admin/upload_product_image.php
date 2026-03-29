@@ -1,7 +1,6 @@
 <?php
 // Upload product image from computer
-require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/bootstrap.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $product_id = $_POST['product_id_upload'] ?? null;
@@ -36,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     
     try {
         // Create uploads directory if not exists
-        $uploadDir = __DIR__ . '/../uploads/products/';
+        $uploadDir = __DIR__ . '/../../uploads/products/';
         if (!file_exists($uploadDir)) {
             mkdir($uploadDir, 0777, true);
         }
@@ -53,7 +52,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             $image_path = 'products/' . $newFileName;
             
-            $query = "UPDATE products SET thumbnail_url = :image_path WHERE id = :product_id";
+            $query = "UPDATE products SET image = :image_path WHERE id = :product_id";
             $stmt = $conn->prepare($query);
             $stmt->bindParam(':image_path', $image_path);
             $stmt->bindParam(':product_id', $product_id);

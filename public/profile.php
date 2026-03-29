@@ -84,6 +84,12 @@ include 'includes/header.php';
                         </div>
                     </div>
 
+                    <?php if (is_admin()): ?>
+                        <a href="admin/dashboard.php" class="mb-6 inline-flex items-center rounded-full border border-[#d8eadf] px-4 py-2 text-sm font-semibold text-text-main transition-colors hover:border-primary hover:text-primary dark:border-[#32483b] dark:text-white">
+                            Vào admin dashboard
+                        </a>
+                    <?php endif; ?>
+
                     <form method="POST" class="grid gap-4">
                         <input type="hidden" name="csrf_token" value="<?= clean(csrf_token()) ?>">
                         <input type="hidden" name="action" value="update_profile">

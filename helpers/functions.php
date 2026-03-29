@@ -86,6 +86,41 @@ function is_admin(): bool {
 }
 
 /**
+ * Ensure the current request is authenticated.
+ *
+ * @param string $redirectTarget
+ * @return void
+ */
+function require_login(string $redirectTarget = 'home.php'): void {
+    if (is_logged_in()) {
+        return;
+    }
+
+    set_flash('error', 'Vui lòng đăng nhập để tiếp tục.');
+    redirect('login.php?redirect=' . urlencode($redirectTarget));
+}
+
+/**
+ * Ensure the current request belongs to an admin user.
+ *
+ * @param string $redirectTarget
+ * @return void
+ */
+function require_admin(string $redirectTarget = 'admin/dashboard.php'): void {
+    if (!is_logged_in()) {
+        set_flash('error', 'Vui lòng đăng nhập bằng tài khoản admin.');
+        redirect('login.php?redirect=' . urlencode($redirectTarget));
+    }
+
+    if (is_admin()) {
+        return;
+    }
+
+    set_flash('error', 'Bạn không có quyền truy cập khu vực admin.');
+    redirect('home.php');
+}
+
+/**
  * Get current user ID
  * 
  * @return int|null User ID or null

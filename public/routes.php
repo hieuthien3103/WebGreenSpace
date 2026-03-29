@@ -40,4 +40,8 @@ $router->get('/login', __DIR__ . '/login.php');
 $router->get('/signup', __DIR__ . '/signup.php');
 $router->post('/logout', __DIR__ . '/logout.php');
 
+// Admin
+$router->get('/admin', __DIR__ . '/admin/dashboard.php');
+$router->get('/admin/dashboard', __DIR__ . '/admin/dashboard.php');
+
 return $router;

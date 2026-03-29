@@ -20,11 +20,11 @@ class CartService {
     public function addItem(int $productId, int $quantity = 1): array {
         $product = $this->productModel->getById($productId);
         if (!$product) {
-            return ['success' => false, 'message' => 'San pham khong ton tai.'];
+            return ['success' => false, 'message' => 'Sản phẩm không tồn tại.'];
         }
 
         if ((int)$product['stock'] <= 0) {
-            return ['success' => false, 'message' => 'San pham da het hang.'];
+            return ['success' => false, 'message' => 'Sản phẩm đã hết hàng.'];
         }
 
         $quantity = max(1, $quantity);
@@ -37,7 +37,7 @@ class CartService {
             'added_at' => date('Y-m-d H:i:s'),
         ];
 
-        return ['success' => true, 'message' => 'Da them san pham vao gio hang.'];
+        return ['success' => true, 'message' => 'Đã thêm sản phẩm vào giỏ hàng.'];
     }
 
     /**

@@ -1,53 +1,58 @@
 <?php
-// Tạo ảnh placeholder cho sản phẩm thiếu ảnh
+require_once __DIR__ . '/bootstrap.php';
 
 $missingImages = [
     'combo-sen.png' => 'Combo Sen Đá',
-    'bang-singapore.png' => 'Cây Bàng Singapore'
+    'bang-singapore.png' => 'Cây Bàng Singapore',
 ];
 
-$outputDir = __DIR__ . '/images/products/';
+$outputDir = __DIR__ . '/../images/products/';
+$results = [];
 
 foreach ($missingImages as $filename => $productName) {
     $filepath = $outputDir . $filename;
-    
+
     if (file_exists($filepath)) {
-        echo "✓ $filename đã tồn tại<br>";
+        $results[] = ['status' => 'success', 'text' => $filename . ' đã tồn tại.'];
         continue;
     }
-    
-    // Tạo ảnh 500x500 với màu nền
+
     $image = imagecreatetruecolor(500, 500);
-    
-    // Màu nền xanh lá nhạt
     $bgColor = imagecolorallocate($image, 200, 230, 201);
     $textColor = imagecolorallocate($image, 46, 125, 50);
     $borderColor = imagecolorallocate($image, 129, 199, 132);
-    
-    // Fill nền
+
     imagefill($image, 0, 0, $bgColor);
-    
-    // Vẽ viền
     imagerectangle($image, 10, 10, 490, 490, $borderColor);
     imagerectangle($image, 11, 11, 489, 489, $borderColor);
-    
-    // Thêm text
+
     $font = 5;
-    $text = $productName;
-    $textWidth = imagefontwidth($font) * strlen($text);
+    $textWidth = imagefontwidth($font) * strlen($productName);
     $textHeight = imagefontheight($font);
-    $x = (500 - $textWidth) / 2;
-    $y = (500 - $textHeight) / 2;
-    
-    imagestring($image, $font, $x, $y, $text, $textColor);
-    
-    // Lưu file
+    $x = (int)((500 - $textWidth) / 2);
+    $y = (int)((500 - $textHeight) / 2);
+
+    imagestring($image, $font, $x, $y, $productName, $textColor);
     imagepng($image, $filepath);
     imagedestroy($image);
-    
-    echo "✓ Đã tạo $filename<br>";
+
+    $results[] = ['status' => 'success', 'text' => 'Đã tạo ' . $filename];
 }
 
-echo "<hr>";
-echo "<p><strong>Hoàn tất!</strong> <a href='check_images.php'>Kiểm tra lại</a> | <a href='products.php'>Xem trang sản phẩm</a></p>";
+render_admin_header('Tạo ảnh placeholder');
 ?>
+
+<div class="space-y-4 rounded-[1.75rem] border border-[#d9e9de] bg-white p-6 shadow-sm">
+    <h2 class="text-2xl font-extrabold text-[#102118]">Kết quả tạo ảnh placeholder</h2>
+    <?php foreach ($results as $result): ?>
+        <div class="rounded-2xl border border-green-200 bg-green-50 px-4 py-3 text-sm font-medium text-green-800">
+            <?= clean($result['text']) ?>
+        </div>
+    <?php endforeach; ?>
+    <div class="flex flex-wrap gap-3 pt-2">
+        <a href="check_images.php" class="inline-flex items-center rounded-full border border-[#d8eadf] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">Kiểm tra ảnh</a>
+        <a href="dashboard.php" class="inline-flex items-center rounded-full border border-[#d8eadf] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">Về dashboard</a>
+    </div>
+</div>
+
+<?php render_admin_footer(); ?>

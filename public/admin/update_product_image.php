@@ -1,7 +1,6 @@
 <?php
 // Update product image with URL
-require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/bootstrap.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $product_id = $_POST['product_id'] ?? null;
@@ -15,8 +14,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $db = new Database();
         $conn = $db->getConnection();
         
-        // Update product thumbnail_url
-        $query = "UPDATE products SET thumbnail_url = :image_url WHERE id = :product_id";
+        // Update product image
+        $query = "UPDATE products SET image = :image_url WHERE id = :product_id";
         $stmt = $conn->prepare($query);
         $stmt->bindParam(':image_url', $image_url);
         $stmt->bindParam(':product_id', $product_id);

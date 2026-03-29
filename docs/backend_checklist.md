@@ -26,8 +26,8 @@
 - [X] Phân quyền admin/user
 
 ## 4. Sản phẩm & Danh mục
-- [ ] CRUD danh mục (admin)
-- [ ] CRUD sản phẩm (admin)
+- [X] CRUD danh mục (admin)
+- [X] CRUD sản phẩm (admin)
 - [X] Hiển thị danh sách sản phẩm
 - [X] Chi tiết sản phẩm
 - [X] Tìm kiếm & lọc

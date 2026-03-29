@@ -16,6 +16,7 @@ function admin_nav_items(): array {
     return [
         'dashboard.php' => 'Dashboard',
         'products.php' => 'Quản lý sản phẩm',
+        'categories.php' => 'Quản lý danh mục',
         'admin_upload_images.php' => 'Ảnh sản phẩm',
     ];
 }

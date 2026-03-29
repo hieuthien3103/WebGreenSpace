@@ -44,5 +44,6 @@ $router->post('/logout', __DIR__ . '/logout.php');
 $router->get('/admin', __DIR__ . '/admin/dashboard.php');
 $router->get('/admin/dashboard', __DIR__ . '/admin/dashboard.php');
 $router->get('/admin/products', __DIR__ . '/admin/products.php');
+$router->get('/admin/categories', __DIR__ . '/admin/categories.php');
 
 return $router;

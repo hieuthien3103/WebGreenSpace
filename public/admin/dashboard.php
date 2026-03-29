@@ -162,6 +162,7 @@ render_admin_header('Dashboard');
                 <h2 class="mt-2 text-2xl font-extrabold">Công cụ admin</h2>
                 <div class="mt-5 grid gap-3">
                     <a href="products.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">CRUD sản phẩm</a>
+                    <a href="categories.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">CRUD danh mục</a>
                     <a href="admin_upload_images.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">Upload ảnh sản phẩm</a>
                     <a href="check_images.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">Kiểm tra dữ liệu ảnh</a>
                     <a href="clear_cache.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">Clear cache</a>

@@ -108,9 +108,9 @@
                 <div class="mt-6">
                     <p class="text-sm text-text-secondary dark:text-gray-400 mb-3">Gợi ý tìm kiếm:</p>
                     <div class="flex flex-wrap gap-2">
-                        <a href="products.php?search=cây+cảnh" class="px-4 py-2 rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] text-sm text-text-main dark:text-white hover:bg-primary hover:text-white transition-colors">Cây cảnh</a>
-                        <a href="products.php?search=sen+đá" class="px-4 py-2 rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] text-sm text-text-main dark:text-white hover:bg-primary hover:text-white transition-colors">Sen đá</a>
-                        <a href="products.php?search=trầu+bà" class="px-4 py-2 rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] text-sm text-text-main dark:text-white hover:bg-primary hover:text-white transition-colors">Trầu bà</a>
+                        <a href="products.php?search=cay+canh" class="px-4 py-2 rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] text-sm text-text-main dark:text-white hover:bg-primary hover:text-white transition-colors">Cây cảnh</a>
+                        <a href="products.php?search=sen+da" class="px-4 py-2 rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] text-sm text-text-main dark:text-white hover:bg-primary hover:text-white transition-colors">Sen đá</a>
+                        <a href="products.php?search=trau+ba" class="px-4 py-2 rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] text-sm text-text-main dark:text-white hover:bg-primary hover:text-white transition-colors">Trầu bà</a>
                         <a href="products.php?search=xương+rồng" class="px-4 py-2 rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] text-sm text-text-main dark:text-white hover:bg-primary hover:text-white transition-colors">Xương rồng</a>
                     </div>
                 </div>

@@ -19,7 +19,13 @@ class Category {
      * @return array Categories list
      */
     public function getAll(): array {
-        $query = "SELECT * FROM {$this->table} ORDER BY name ASC";
+        $query = "SELECT c.*,
+                         COUNT(CASE WHEN p.status = 'active' THEN p.id END) AS product_count
+                  FROM {$this->table} c
+                  LEFT JOIN products p ON c.id = p.category_id
+                  WHERE c.status = 'active'
+                  GROUP BY c.id
+                  ORDER BY c.name ASC";
         $stmt = $this->conn->prepare($query);
         $stmt->execute();
         
@@ -35,7 +41,8 @@ class Category {
     public function getTop(int $limit = 5): array {
         $query = "SELECT c.*, COUNT(p.id) as product_count
                   FROM {$this->table} c
-                  LEFT JOIN products p ON c.id = p.category_id
+                  LEFT JOIN products p ON c.id = p.category_id AND p.status = 'active'
+                  WHERE c.status = 'active'
                   GROUP BY c.id
                   ORDER BY product_count DESC
                   LIMIT :limit";
@@ -54,7 +61,8 @@ class Category {
      * @return array|null Category data or null
      */
     public function getById(int $id): ?array {
-        $query = "SELECT * FROM {$this->table} WHERE id = :id";
+        $query = "SELECT * FROM {$this->table}
+                  WHERE id = :id AND status = 'active'";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
@@ -73,7 +81,8 @@ class Category {
      * @return array|null Category data or null
      */
     public function getBySlug(string $slug): ?array {
-        $query = "SELECT * FROM {$this->table} WHERE slug = :slug";
+        $query = "SELECT * FROM {$this->table}
+                  WHERE slug = :slug AND status = 'active'";
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':slug', $slug, PDO::PARAM_STR);
         $stmt->execute();

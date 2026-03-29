@@ -44,11 +44,31 @@ if ($category) {
 // Extract filters for view
 $category_filter = $filters['category'];
 $search = $filters['search'];
-$sort = $filters['sort'];
-$page = $filters['page'];
-$limit = $filters['limit'];
+$sort = $result['sort'] ?? $filters['sort'];
+$page = max(1, (int)($result['page'] ?? $filters['page']));
+$limit = max(1, (int)($result['limit'] ?? $filters['limit']));
 $min_price = $filters['min_price'];
 $max_price = $filters['max_price'];
+$totalProducts = max(0, (int)($result['total'] ?? 0));
+$totalPages = max(1, (int)($result['total_pages'] ?? 1));
+
+$buildProductsUrl = static function (int $targetPage) use ($category_filter, $search, $sort, $min_price, $max_price): string {
+    $params = [
+        'page' => $targetPage,
+        'category' => $category_filter,
+        'search' => $search,
+        'sort' => $sort,
+        'min_price' => $min_price,
+        'max_price' => $max_price,
+    ];
+
+    $params = array_filter($params, static function ($value) {
+        return $value !== null && $value !== '';
+    });
+
+    $query = http_build_query($params);
+    return '/products.php' . ($query !== '' ? '?' . $query : '');
+};
 
 include 'includes/header.php'; 
 ?>
@@ -107,6 +127,7 @@ include 'includes/header.php';
         function handleSort(value) {
             const url = new URL(window.location.href);
             url.searchParams.set('sort', value);
+            url.searchParams.set('page', '1');
             window.location.href = url.toString();
         }
         </script>
@@ -236,7 +257,7 @@ include 'includes/header.php';
                 <div class="mb-4 flex items-center gap-2 text-text-secondary">
                     <span class="material-symbols-outlined text-lg">search</span>
                     <span>Kết quả tìm kiếm cho "<strong class="text-text-main"><?= clean($search) ?></strong>"</span>
-                    <span class="text-sm">(<?= count($products) ?> sản phẩm)</span>
+                    <span class="text-sm">(<?= $totalProducts ?> sản phẩm)</span>
                 </div>
                 <?php endif; ?>
                 
@@ -325,28 +346,43 @@ include 'includes/header.php';
                 </div>
                 
                 <!-- Pagination -->
-                <?php if (!empty($products) && count($products) >= $limit): ?>
-                <div class="mt-12 flex justify-center">
-                    <?php
-                    $paginationParams = [
-                        'page' => $page + 1,
-                        'category' => $category_filter,
-                        'search' => $search,
-                        'sort' => $sort,
-                        'min_price' => $min_price,
-                        'max_price' => $max_price
-                    ];
-                    // Remove empty params
-                    $paginationParams = array_filter($paginationParams, function($value) {
-                        return !empty($value) || $value === 0;
-                    });
-                    $paginationQuery = http_build_query($paginationParams);
-                    ?>
-                    <a href="/products.php?<?= $paginationQuery ?>" 
-                       class="px-8 py-3 rounded-full bg-white dark:bg-[#1e2b24] border border-[#e9f2ec] dark:border-gray-700 text-text-main dark:text-white font-bold hover:bg-primary hover:text-white hover:border-primary transition-all duration-300 shadow-sm flex items-center gap-2">
-                        Xem thêm sản phẩm
-                        <span class="material-symbols-outlined">expand_more</span>
-                    </a>
+                <?php if ($totalProducts > 0 && $totalPages > 1): ?>
+                <?php
+                $pageNumbers = array_unique(array_merge(
+                    [1, $totalPages],
+                    range(max(1, $page - 2), min($totalPages, $page + 2))
+                ));
+                sort($pageNumbers);
+                ?>
+                <div class="mt-12 flex flex-col items-center gap-4">
+                    <nav class="flex flex-wrap items-center justify-center gap-2" aria-label="Pagination">
+                        <a href="<?= clean($buildProductsUrl(max(1, $page - 1))) ?>"
+                           class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#e9f2ec] dark:border-gray-700 bg-white dark:bg-[#1e2b24] text-sm font-semibold text-text-main dark:text-white transition-colors <?= $page <= 1 ? 'pointer-events-none opacity-50' : 'hover:border-primary hover:text-primary' ?>">
+                            <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                            Trước
+                        </a>
+
+                        <?php $previousPageNumber = null; ?>
+                        <?php foreach ($pageNumbers as $pageNumber): ?>
+                            <?php if ($previousPageNumber !== null && $pageNumber - $previousPageNumber > 1): ?>
+                                <span class="px-2 text-text-secondary">...</span>
+                            <?php endif; ?>
+
+                            <a href="<?= clean($buildProductsUrl($pageNumber)) ?>"
+                               aria-current="<?= $pageNumber === $page ? 'page' : 'false' ?>"
+                               class="inline-flex min-w-11 items-center justify-center rounded-full border px-4 py-2 text-sm font-semibold transition-colors <?= $pageNumber === $page ? 'border-primary bg-primary text-white shadow-lg shadow-primary/20' : 'border-[#e9f2ec] dark:border-gray-700 bg-white dark:bg-[#1e2b24] text-text-main dark:text-white hover:border-primary hover:text-primary' ?>">
+                                <?= $pageNumber ?>
+                            </a>
+
+                            <?php $previousPageNumber = $pageNumber; ?>
+                        <?php endforeach; ?>
+
+                        <a href="<?= clean($buildProductsUrl(min($totalPages, $page + 1))) ?>"
+                           class="inline-flex items-center gap-2 px-4 py-2 rounded-full border border-[#e9f2ec] dark:border-gray-700 bg-white dark:bg-[#1e2b24] text-sm font-semibold text-text-main dark:text-white transition-colors <?= $page >= $totalPages ? 'pointer-events-none opacity-50' : 'hover:border-primary hover:text-primary' ?>">
+                            Sau
+                            <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                        </a>
+                    </nav>
                 </div>
                 <?php endif; ?>
             </section>

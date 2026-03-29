@@ -56,7 +56,9 @@ class Product {
     /**
      * Get best selling products.
      */
-    public function getBestSellers(int $limit = 8): array {
+    public function getBestSellers(int $limit = 8, int $offset = 0, array $filters = []): array {
+        [$whereClauses, $params] = $this->buildFilterClauses($filters, 'p', 'c');
+
         $query = "SELECT " . self::SELECT_FIELDS . ",
                          COALESCE(SUM(CASE
                              WHEN o.order_status IS NULL OR o.order_status != 'cancelled' THEN od.quantity
@@ -66,13 +68,15 @@ class Product {
                   LEFT JOIN categories c ON p.category_id = c.id
                   LEFT JOIN order_details od ON p.id = od.product_id
                   LEFT JOIN orders o ON od.order_id = o.id
-                  WHERE " . self::ACTIVE_PRODUCT_WHERE . "
+                  WHERE " . implode(' AND ', $whereClauses) . "
                   GROUP BY p.id, c.name, c.slug
                   ORDER BY total_sold DESC, p.featured DESC, p.created_at DESC
-                  LIMIT :limit";
+                  LIMIT :limit OFFSET :offset";
 
         $stmt = $this->conn->prepare($query);
+        $this->bindFilterParams($stmt, $params);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
 
         return $this->formatProducts($stmt->fetchAll(), true);
@@ -156,54 +160,19 @@ class Product {
     /**
      * Get filtered products with advanced filters.
      */
-    public function getFilteredProducts(array $filters = [], int $limit = 12, int $offset = 0): array {
-        $priceExpression = $this->getEffectivePriceExpression();
-        $whereClauses = [self::ACTIVE_PRODUCT_WHERE];
-        $params = [];
-
-        if (isset($filters['min_price']) && is_numeric($filters['min_price'])) {
-            $whereClauses[] = "{$priceExpression} >= :min_price";
-            $params[':min_price'] = (float)$filters['min_price'];
-        }
-
-        if (isset($filters['max_price']) && is_numeric($filters['max_price'])) {
-            $whereClauses[] = "{$priceExpression} <= :max_price";
-            $params[':max_price'] = (float)$filters['max_price'];
-        }
-
-        if (!empty($filters['category_id'])) {
-            $whereClauses[] = 'p.category_id = :category_id';
-            $params[':category_id'] = (int)$filters['category_id'];
-        }
-
-        if (!empty($filters['search'])) {
-            $whereClauses[] = '(p.name LIKE :search OR p.description LIKE :search OR c.name LIKE :search)';
-            $params[':search'] = '%' . $filters['search'] . '%';
-        }
+    public function getFilteredProducts(array $filters = [], int $limit = 12, int $offset = 0, string $sort = 'newest'): array {
+        [$whereClauses, $params] = $this->buildFilterClauses($filters, 'p', 'c');
+        $orderBy = $this->resolveOrderBy($sort);
 
         $query = "SELECT " . self::SELECT_FIELDS . "
                   FROM {$this->table} p
                   LEFT JOIN categories c ON p.category_id = c.id
                   WHERE " . implode(' AND ', $whereClauses) . "
-                  ORDER BY p.featured DESC, p.created_at DESC
+                  ORDER BY {$orderBy}
                   LIMIT :limit OFFSET :offset";
 
         $stmt = $this->conn->prepare($query);
-
-        foreach ($params as $key => $value) {
-            if (is_int($value)) {
-                $stmt->bindValue($key, $value, PDO::PARAM_INT);
-                continue;
-            }
-
-            if (is_float($value)) {
-                $stmt->bindValue($key, (string)$value, PDO::PARAM_STR);
-                continue;
-            }
-
-            $stmt->bindValue($key, $value, PDO::PARAM_STR);
-        }
-
+        $this->bindFilterParams($stmt, $params);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
@@ -291,6 +260,25 @@ class Product {
     }
 
     /**
+     * Get total count with full filter support.
+     */
+    public function getFilteredTotal(array $filters = []): int {
+        [$whereClauses, $params] = $this->buildFilterClauses($filters, 'p', 'c');
+
+        $query = "SELECT COUNT(*) AS total
+                  FROM {$this->table} p
+                  LEFT JOIN categories c ON p.category_id = c.id
+                  WHERE " . implode(' AND ', $whereClauses);
+
+        $stmt = $this->conn->prepare($query);
+        $this->bindFilterParams($stmt, $params);
+        $stmt->execute();
+
+        $result = $stmt->fetch();
+        return (int)($result['total'] ?? 0);
+    }
+
+    /**
      * Get related products from the same category, excluding the current product.
      */
     public function getRelatedProducts(int $productId, int $categoryId, int $limit = 4): array {
@@ -360,6 +348,62 @@ class Product {
     }
 
     /**
+     * Build reusable filter clauses for listing queries.
+     */
+    private function buildFilterClauses(array $filters, string $productAlias = 'p', string $categoryAlias = 'c'): array {
+        $priceExpression = $this->getEffectivePriceExpression($productAlias);
+        $whereClauses = ["{$productAlias}.status = 'active'"];
+        $params = [];
+
+        if (isset($filters['min_price']) && is_numeric($filters['min_price'])) {
+            $whereClauses[] = "{$priceExpression} >= :min_price";
+            $params[':min_price'] = (float)$filters['min_price'];
+        }
+
+        if (isset($filters['max_price']) && is_numeric($filters['max_price'])) {
+            $whereClauses[] = "{$priceExpression} <= :max_price";
+            $params[':max_price'] = (float)$filters['max_price'];
+        }
+
+        if (!empty($filters['category_id'])) {
+            $whereClauses[] = "{$productAlias}.category_id = :category_id";
+            $params[':category_id'] = (int)$filters['category_id'];
+        }
+
+        if (!empty($filters['search'])) {
+            $whereClauses[] = "({$productAlias}.name LIKE :search OR {$productAlias}.description LIKE :search OR {$categoryAlias}.name LIKE :search)";
+            $params[':search'] = '%' . $filters['search'] . '%';
+        }
+
+        return [$whereClauses, $params];
+    }
+
+    /**
+     * Bind filter params for reusable listing queries.
+     */
+    private function bindFilterParams(PDOStatement $stmt, array $params): void {
+        foreach ($params as $key => $value) {
+            if (is_int($value)) {
+                $stmt->bindValue($key, $value, PDO::PARAM_INT);
+                continue;
+            }
+
+            $stmt->bindValue($key, (string)$value, PDO::PARAM_STR);
+        }
+    }
+
+    /**
+     * Resolve SQL ORDER BY for listing pages.
+     */
+    private function resolveOrderBy(string $sort): string {
+        return match ($sort) {
+            'price_asc' => "CASE WHEN p.sale_price IS NOT NULL AND p.sale_price > 0 THEN p.sale_price ELSE p.price END ASC, p.featured DESC, p.created_at DESC",
+            'price_desc' => "CASE WHEN p.sale_price IS NOT NULL AND p.sale_price > 0 THEN p.sale_price ELSE p.price END DESC, p.featured DESC, p.created_at DESC",
+            default => "p.featured DESC, p.created_at DESC",
+        };
+    }
+
+    /**
      * Resolve displayed badge.
      */
     private function resolveBadge(array $product): ?string {
@@ -391,8 +435,8 @@ class Product {
     /**
      * Build expression for price filters based on the displayed price.
      */
-    private function getEffectivePriceExpression(): string {
-        return 'CASE WHEN p.sale_price IS NOT NULL AND p.sale_price > 0 THEN p.sale_price ELSE p.price END';
+    private function getEffectivePriceExpression(string $productAlias = 'p'): string {
+        return "CASE WHEN {$productAlias}.sale_price IS NOT NULL AND {$productAlias}.sale_price > 0 THEN {$productAlias}.sale_price ELSE {$productAlias}.price END";
     }
 
     /**

@@ -9,7 +9,7 @@ $recentUsers = $dashboard['recent_users'];
 $topProducts = $dashboard['top_products'];
 $lowStockProducts = $dashboard['low_stock_products'];
 
-render_admin_header('Admin Dashboard');
+render_admin_header('Dashboard');
 ?>
 
 <div class="space-y-8">
@@ -37,10 +37,10 @@ render_admin_header('Admin Dashboard');
             <article class="rounded-[1.75rem] border border-[#d9e9de] bg-white p-6 shadow-sm">
                 <div class="mb-5 flex items-center justify-between gap-3">
                     <div>
-                        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Recent orders</p>
+                        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Đơn hàng</p>
                         <h2 class="mt-2 text-2xl font-extrabold text-[#102118]">Đơn hàng gần đây</h2>
                     </div>
-                    <a href="../profile.php?tab=orders" class="text-sm font-semibold text-[#2e9b63] hover:text-[#22784d]">Xem profile</a>
+                    <a href="../profile.php?tab=orders" class="text-sm font-semibold text-[#2e9b63] hover:text-[#22784d]">Xem hồ sơ</a>
                 </div>
 
                 <div class="overflow-x-auto">
@@ -77,9 +77,12 @@ render_admin_header('Admin Dashboard');
             </article>
 
             <article class="rounded-[1.75rem] border border-[#d9e9de] bg-white p-6 shadow-sm">
-                <div class="mb-5">
-                    <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Top products</p>
-                    <h2 class="mt-2 text-2xl font-extrabold text-[#102118]">Sản phẩm bán chạy</h2>
+                <div class="mb-5 flex items-center justify-between gap-3">
+                    <div>
+                        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Sản phẩm</p>
+                        <h2 class="mt-2 text-2xl font-extrabold text-[#102118]">Sản phẩm bán chạy</h2>
+                    </div>
+                    <a href="products.php" class="text-sm font-semibold text-[#2e9b63] hover:text-[#22784d]">Quản lý sản phẩm</a>
                 </div>
 
                 <div class="grid gap-4 md:grid-cols-2">
@@ -90,7 +93,10 @@ render_admin_header('Admin Dashboard');
                                 <span class="text-[#6e8d7b]">Đã bán: <strong class="text-[#102118]"><?= clean((string)$product['units_sold']) ?></strong></span>
                                 <span class="text-[#6e8d7b]">Tồn: <strong class="text-[#102118]"><?= clean((string)$product['stock']) ?></strong></span>
                             </div>
-                            <a href="../product-detail.php?slug=<?= clean($product['slug']) ?>" class="mt-4 inline-flex text-sm font-semibold text-[#2e9b63] hover:text-[#22784d]">Xem sản phẩm</a>
+                            <div class="mt-4 flex flex-wrap gap-3">
+                                <a href="products.php?edit=<?= clean((string)$product['id']) ?>" class="text-sm font-semibold text-[#2e9b63] hover:text-[#22784d]">Sửa nhanh</a>
+                                <a href="../product-detail.php?slug=<?= clean($product['slug']) ?>" class="text-sm font-semibold text-[#102118] hover:text-[#2e9b63]">Xem ngoài site</a>
+                            </div>
                         </article>
                     <?php endforeach; ?>
                 </div>
@@ -100,7 +106,7 @@ render_admin_header('Admin Dashboard');
         <div class="space-y-8">
             <article class="rounded-[1.75rem] border border-[#d9e9de] bg-white p-6 shadow-sm">
                 <div class="mb-5">
-                    <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">New users</p>
+                    <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Người dùng</p>
                     <h2 class="mt-2 text-2xl font-extrabold text-[#102118]">Tài khoản mới</h2>
                 </div>
 
@@ -121,9 +127,12 @@ render_admin_header('Admin Dashboard');
             </article>
 
             <article class="rounded-[1.75rem] border border-[#d9e9de] bg-white p-6 shadow-sm">
-                <div class="mb-5">
-                    <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Inventory alert</p>
-                    <h2 class="mt-2 text-2xl font-extrabold text-[#102118]">Sắp hết hàng</h2>
+                <div class="mb-5 flex items-center justify-between gap-3">
+                    <div>
+                        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Tồn kho</p>
+                        <h2 class="mt-2 text-2xl font-extrabold text-[#102118]">Sắp hết hàng</h2>
+                    </div>
+                    <a href="products.php?status=active" class="text-sm font-semibold text-[#2e9b63] hover:text-[#22784d]">Mở quản lý kho</a>
                 </div>
 
                 <?php if (empty($lowStockProducts)): ?>
@@ -149,9 +158,10 @@ render_admin_header('Admin Dashboard');
             </article>
 
             <article class="rounded-[1.75rem] border border-[#d9e9de] bg-[#102118] p-6 text-white shadow-sm">
-                <p class="text-sm font-semibold uppercase tracking-[0.18em] text-white/65">Quick access</p>
+                <p class="text-sm font-semibold uppercase tracking-[0.18em] text-white/65">Truy cập nhanh</p>
                 <h2 class="mt-2 text-2xl font-extrabold">Công cụ admin</h2>
                 <div class="mt-5 grid gap-3">
+                    <a href="products.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">CRUD sản phẩm</a>
                     <a href="admin_upload_images.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">Upload ảnh sản phẩm</a>
                     <a href="check_images.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">Kiểm tra dữ liệu ảnh</a>
                     <a href="clear_cache.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">Clear cache</a>

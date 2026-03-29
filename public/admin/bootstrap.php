@@ -12,15 +12,18 @@ if (!is_admin()) {
     redirect('../home.php');
 }
 
-/**
- * Render a compact admin header.
- *
- * @param string $title
- * @return void
- */
+function admin_nav_items(): array {
+    return [
+        'dashboard.php' => 'Dashboard',
+        'products.php' => 'Quản lý sản phẩm',
+        'admin_upload_images.php' => 'Ảnh sản phẩm',
+    ];
+}
+
 function render_admin_header(string $title): void {
     $flash = get_flash();
     $adminName = get_user_name() ?? 'Admin';
+    $currentPage = basename((string)parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH));
     ?>
     <!DOCTYPE html>
     <html lang="vi">
@@ -42,25 +45,39 @@ function render_admin_header(string $title): void {
     <body class="min-h-screen bg-[#eef6f1] font-['Plus_Jakarta_Sans'] text-[#102118]">
         <div class="min-h-screen">
             <header class="border-b border-[#d9e9de] bg-white/90 backdrop-blur">
-                <div class="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-4 sm:px-6 lg:px-8">
-                    <div>
-                        <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[#2e9b63]">GreenSpace</p>
-                        <h1 class="mt-1 text-2xl font-extrabold"><?= clean($title) ?></h1>
+                <div class="mx-auto max-w-7xl px-4 py-4 sm:px-6 lg:px-8">
+                    <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                        <div>
+                            <p class="text-xs font-semibold uppercase tracking-[0.22em] text-[#2e9b63]">GreenSpace Admin</p>
+                            <h1 class="mt-1 text-2xl font-extrabold"><?= clean($title) ?></h1>
+                        </div>
+
+                        <div class="flex flex-wrap items-center gap-3">
+                            <a href="../home.php" class="inline-flex items-center rounded-full border border-[#d9e9de] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">
+                                Về trang bán hàng
+                            </a>
+                            <a href="../profile.php" class="inline-flex items-center rounded-full border border-[#d9e9de] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">
+                                <?= clean($adminName) ?>
+                            </a>
+                            <form action="../logout.php" method="POST">
+                                <input type="hidden" name="csrf_token" value="<?= clean(csrf_token()) ?>">
+                                <button type="submit" class="inline-flex items-center rounded-full bg-[#102118] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#1f3b2d]">
+                                    Đăng xuất
+                                </button>
+                            </form>
+                        </div>
                     </div>
-                    <div class="flex items-center gap-3">
-                        <a href="../home.php" class="inline-flex items-center rounded-full border border-[#d9e9de] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">
-                            Về trang bán hàng
-                        </a>
-                        <a href="../profile.php" class="inline-flex items-center rounded-full border border-[#d9e9de] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">
-                            <?= clean($adminName) ?>
-                        </a>
-                        <form action="../logout.php" method="POST">
-                            <input type="hidden" name="csrf_token" value="<?= clean(csrf_token()) ?>">
-                            <button type="submit" class="inline-flex items-center rounded-full bg-[#102118] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#1f3b2d]">
-                                Đăng xuất
-                            </button>
-                        </form>
-                    </div>
+
+                    <nav class="mt-4 flex flex-wrap gap-2">
+                        <?php foreach (admin_nav_items() as $file => $label): ?>
+                            <a
+                                href="<?= clean($file) ?>"
+                                class="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition-colors <?= $currentPage === $file ? 'bg-[#102118] text-white' : 'border border-[#d9e9de] text-[#102118] hover:border-[#2e9b63] hover:text-[#2e9b63]' ?>"
+                            >
+                                <?= clean($label) ?>
+                            </a>
+                        <?php endforeach; ?>
+                    </nav>
                 </div>
             </header>
 
@@ -76,11 +93,6 @@ function render_admin_header(string $title): void {
     <?php
 }
 
-/**
- * Render admin footer.
- *
- * @return void
- */
 function render_admin_footer(): void {
     ?>
             </main>

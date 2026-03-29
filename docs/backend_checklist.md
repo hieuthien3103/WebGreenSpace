@@ -23,7 +23,7 @@
 - [X] Đăng nhập
 - [X] Hash password
 - [X] Session login
-- [ ] Phân quyền admin/user
+- [X] Phân quyền admin/user
 
 ## 4. Sản phẩm & Danh mục
 - [ ] CRUD danh mục (admin)

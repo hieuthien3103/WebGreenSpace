@@ -314,6 +314,195 @@ class Product {
     }
 
     /**
+     * Get products for the admin management table.
+     */
+    public function getAdminList(string $search = '', string $status = 'all', int $limit = 20, int $offset = 0): array {
+        [$whereClauses, $params] = $this->buildAdminWhereClauses($search, $status);
+
+        $query = "SELECT " . self::SELECT_FIELDS . ",
+                         (
+                             SELECT COUNT(*)
+                             FROM order_details od
+                             WHERE od.product_id = p.id
+                         ) AS order_count
+                  FROM {$this->table} p
+                  LEFT JOIN categories c ON p.category_id = c.id
+                  WHERE " . implode(' AND ', $whereClauses) . "
+                  ORDER BY p.updated_at DESC, p.created_at DESC
+                  LIMIT :limit OFFSET :offset";
+
+        $stmt = $this->conn->prepare($query);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value, PDO::PARAM_STR);
+        }
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $this->formatProducts($stmt->fetchAll());
+    }
+
+    /**
+     * Count products for the admin management table.
+     */
+    public function getAdminTotal(string $search = '', string $status = 'all'): int {
+        [$whereClauses, $params] = $this->buildAdminWhereClauses($search, $status);
+
+        $query = "SELECT COUNT(*) AS total
+                  FROM {$this->table} p
+                  LEFT JOIN categories c ON p.category_id = c.id
+                  WHERE " . implode(' AND ', $whereClauses);
+
+        $stmt = $this->conn->prepare($query);
+        foreach ($params as $key => $value) {
+            $stmt->bindValue($key, $value, PDO::PARAM_STR);
+        }
+        $stmt->execute();
+
+        $result = $stmt->fetch();
+        return (int)($result['total'] ?? 0);
+    }
+
+    /**
+     * Get product by ID for admin pages, including inactive products.
+     */
+    public function getAdminById(int $id): ?array {
+        $query = "SELECT " . self::SELECT_FIELDS . "
+                  FROM {$this->table} p
+                  LEFT JOIN categories c ON p.category_id = c.id
+                  WHERE p.id = :id";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $product = $stmt->fetch();
+        return $product ? $this->formatProduct($product) : null;
+    }
+
+    /**
+     * Check whether a slug already exists.
+     */
+    public function slugExists(string $slug, ?int $excludeId = null): bool {
+        $query = "SELECT COUNT(*) AS total
+                  FROM {$this->table}
+                  WHERE slug = :slug";
+
+        if ($excludeId !== null) {
+            $query .= " AND id != :exclude_id";
+        }
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindValue(':slug', $slug, PDO::PARAM_STR);
+
+        if ($excludeId !== null) {
+            $stmt->bindValue(':exclude_id', $excludeId, PDO::PARAM_INT);
+        }
+
+        $stmt->execute();
+        $result = $stmt->fetch();
+
+        return (int)($result['total'] ?? 0) > 0;
+    }
+
+    /**
+     * Create a new product from the admin dashboard.
+     */
+    public function createAdminProduct(array $data): int {
+        $query = "INSERT INTO {$this->table} (
+                        category_id,
+                        name,
+                        slug,
+                        description,
+                        price,
+                        sale_price,
+                        stock,
+                        image,
+                        size,
+                        care_level,
+                        light_requirement,
+                        water_requirement,
+                        featured,
+                        status
+                  ) VALUES (
+                        :category_id,
+                        :name,
+                        :slug,
+                        :description,
+                        :price,
+                        :sale_price,
+                        :stock,
+                        :image,
+                        :size,
+                        :care_level,
+                        :light_requirement,
+                        :water_requirement,
+                        :featured,
+                        :status
+                  )";
+
+        $stmt = $this->conn->prepare($query);
+        $this->bindAdminProductValues($stmt, $data);
+        $stmt->execute();
+
+        return (int)$this->conn->lastInsertId();
+    }
+
+    /**
+     * Update an existing product from the admin dashboard.
+     */
+    public function updateAdminProduct(int $id, array $data): bool {
+        $query = "UPDATE {$this->table}
+                  SET category_id = :category_id,
+                      name = :name,
+                      slug = :slug,
+                      description = :description,
+                      price = :price,
+                      sale_price = :sale_price,
+                      stock = :stock,
+                      image = :image,
+                      size = :size,
+                      care_level = :care_level,
+                      light_requirement = :light_requirement,
+                      water_requirement = :water_requirement,
+                      featured = :featured,
+                      status = :status
+                  WHERE id = :id";
+
+        $stmt = $this->conn->prepare($query);
+        $this->bindAdminProductValues($stmt, $data);
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+
+        return $stmt->execute();
+    }
+
+    /**
+     * Delete a product safely for admin pages.
+     * Products with order history are marked inactive instead of being removed.
+     */
+    public function deleteAdminProduct(int $id): array {
+        if ($this->hasOrderHistory($id)) {
+            $stmt = $this->conn->prepare("UPDATE {$this->table}
+                                          SET status = 'inactive', featured = 0
+                                          WHERE id = :id");
+            $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+
+            return [
+                'success' => $stmt->execute(),
+                'mode' => 'inactivated',
+            ];
+        }
+
+        $stmt = $this->conn->prepare("DELETE FROM {$this->table} WHERE id = :id");
+        $stmt->bindValue(':id', $id, PDO::PARAM_INT);
+
+        return [
+            'success' => $stmt->execute(),
+            'mode' => 'deleted',
+        ];
+    }
+
+    /**
      * Format one product row for the current frontend.
      */
     private function formatProduct(array $product): array {
@@ -379,6 +568,26 @@ class Product {
     }
 
     /**
+     * Build filters for the admin product table.
+     */
+    private function buildAdminWhereClauses(string $search = '', string $status = 'all'): array {
+        $whereClauses = ['1 = 1'];
+        $params = [];
+
+        if ($status === 'active' || $status === 'inactive') {
+            $whereClauses[] = 'p.status = :status';
+            $params[':status'] = $status;
+        }
+
+        if ($search !== '') {
+            $whereClauses[] = '(p.name LIKE :search OR p.slug LIKE :search OR c.name LIKE :search)';
+            $params[':search'] = '%' . $search . '%';
+        }
+
+        return [$whereClauses, $params];
+    }
+
+    /**
      * Bind filter params for reusable listing queries.
      */
     private function bindFilterParams(PDOStatement $stmt, array $params): void {
@@ -390,6 +599,38 @@ class Product {
 
             $stmt->bindValue($key, (string)$value, PDO::PARAM_STR);
         }
+    }
+
+    /**
+     * Bind values for create/update admin forms.
+     */
+    private function bindAdminProductValues(PDOStatement $stmt, array $data): void {
+        $stmt->bindValue(':category_id', (int)$data['category_id'], PDO::PARAM_INT);
+        $stmt->bindValue(':name', (string)$data['name'], PDO::PARAM_STR);
+        $stmt->bindValue(':slug', (string)$data['slug'], PDO::PARAM_STR);
+        $stmt->bindValue(':description', $data['description'] !== '' ? (string)$data['description'] : null, $data['description'] !== '' ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        $stmt->bindValue(':price', (string)$data['price'], PDO::PARAM_STR);
+        $stmt->bindValue(':sale_price', $data['sale_price'] !== null ? (string)$data['sale_price'] : null, $data['sale_price'] !== null ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        $stmt->bindValue(':stock', (int)$data['stock'], PDO::PARAM_INT);
+        $stmt->bindValue(':image', $data['image'] !== '' ? (string)$data['image'] : null, $data['image'] !== '' ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        $stmt->bindValue(':size', $data['size'] !== '' ? (string)$data['size'] : null, $data['size'] !== '' ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        $stmt->bindValue(':care_level', (string)$data['care_level'], PDO::PARAM_STR);
+        $stmt->bindValue(':light_requirement', (string)$data['light_requirement'], PDO::PARAM_STR);
+        $stmt->bindValue(':water_requirement', (string)$data['water_requirement'], PDO::PARAM_STR);
+        $stmt->bindValue(':featured', !empty($data['featured']) ? 1 : 0, PDO::PARAM_INT);
+        $stmt->bindValue(':status', (string)$data['status'], PDO::PARAM_STR);
+    }
+
+    /**
+     * Check whether the product already appears in orders.
+     */
+    private function hasOrderHistory(int $productId): bool {
+        $stmt = $this->conn->prepare("SELECT COUNT(*) AS total FROM order_details WHERE product_id = :id");
+        $stmt->bindValue(':id', $productId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $result = $stmt->fetch();
+        return (int)($result['total'] ?? 0) > 0;
     }
 
     /**

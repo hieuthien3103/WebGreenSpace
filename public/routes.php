@@ -43,5 +43,6 @@ $router->post('/logout', __DIR__ . '/logout.php');
 // Admin
 $router->get('/admin', __DIR__ . '/admin/dashboard.php');
 $router->get('/admin/dashboard', __DIR__ . '/admin/dashboard.php');
+$router->get('/admin/products', __DIR__ . '/admin/products.php');
 
 return $router;

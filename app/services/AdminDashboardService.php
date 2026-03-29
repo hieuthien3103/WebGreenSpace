@@ -104,7 +104,8 @@ class AdminDashboardService {
      * Get top products by units sold.
      */
     private function getTopProducts(): array {
-        $query = "SELECT p.name,
+        $query = "SELECT p.id,
+                         p.name,
                          p.slug,
                          p.stock,
                          COALESCE(SUM(CASE WHEN o.order_status != 'cancelled' THEN od.quantity ELSE 0 END), 0) AS units_sold

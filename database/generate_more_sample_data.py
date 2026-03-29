@@ -40,41 +40,41 @@ class ProductSeed:
 
 
 PRODUCT_SEEDS: list[ProductSeed] = [
-    ProductSeed("cay-noi-that", "Cay Bach Ma Galaxy", "Cay noi that co tan la sang, hop phong khach va studio.", "Vua", "easy", "medium", "medium", 420000, 389000, 26, 1, "https://images.unsplash.com/photo-1545241047-6083a3684587?w=800&q=80"),
-    ProductSeed("cay-noi-that", "Cay Monstera Cot Gach", "Dang la xe dep, phu hop can ho co anh sang tan xa.", "Lon", "medium", "medium", "medium", 690000, None, 18, 1, "https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=800&q=80"),
-    ProductSeed("cay-noi-that", "Cay Philodendron Ring", "Form la mem, de len ke TV va ban console.", "Vua", "easy", "low", "medium", 360000, 329000, 22, 0, "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?w=800&q=80"),
-    ProductSeed("cay-van-phong", "Cay Kim Ngan Mini", "Dang than gon, hop ban lam viec va quay le tan.", "Nho", "easy", "medium", "low", 310000, None, 30, 1, "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?w=800&q=80"),
-    ProductSeed("cay-van-phong", "Cay Luoi Ho Tron Chau Xi Mang", "Mau la dam, de cham va phu hop nguoi ban ron.", "Vua", "easy", "low", "low", 290000, None, 35, 1, "https://images.unsplash.com/photo-1593482892290-f54927ae1bb6?w=800&q=80"),
-    ProductSeed("cay-van-phong", "Cay Truong Sinh Marble", "Hop cua so nhieu sang, tao diem nhan tren ban hop.", "Nho", "easy", "medium", "medium", 255000, 229000, 28, 0, "https://images.unsplash.com/photo-1512428813834-c702c7702b78?w=800&q=80"),
-    ProductSeed("cay-sen-da", "Sen Da Kem Hong", "Chau sen da tong pastel de trung bay tren ke nho.", "Nho", "easy", "high", "low", 175000, None, 40, 0, "https://images.unsplash.com/photo-1542090675-da82b9a9d923?w=800&q=80"),
-    ProductSeed("cay-sen-da", "Sen Da Lima Mix", "Set 3 chau mix mau, hop lam qua tang van phong.", "Nho", "easy", "high", "low", 210000, 189000, 34, 1, "https://images.unsplash.com/photo-1459156212016-c812468e2115?w=800&q=80"),
-    ProductSeed("cay-sen-da", "Sen Da Vuon Soi", "Phong cach toi gian cho ban hoc va ban trang diem.", "Nho", "easy", "high", "low", 160000, None, 46, 0, "https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=800&q=80"),
-    ProductSeed("cay-thuy-sinh", "Cay Lan Nuoc Mini", "Dang gon dep, co the trung trong binh thuy tinh.", "Nho", "medium", "medium", "high", 240000, None, 20, 0, "https://images.unsplash.com/photo-1520412099551-62b6bafeb5bb?w=800&q=80"),
-    ProductSeed("cay-thuy-sinh", "Cay Tram Nuoc Decor", "Tao goc xanh cho ke sach va khong gian cafe.", "Vua", "medium", "medium", "high", 330000, 299000, 16, 0, "https://images.unsplash.com/photo-1509423350716-97f9360b4e09?w=800&q=80"),
-    ProductSeed("cay-phong-thuy", "Cay Ngoc Bich Tai Loc", "Tang thong diep may man, hop khai truong va tan gia.", "Vua", "easy", "medium", "low", 350000, None, 25, 1, "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=800&q=80"),
-    ProductSeed("cay-phong-thuy", "Cay Van Loc Do", "Tong mau noi bat, hop quay thu ngan va phong tiep khach.", "Vua", "medium", "medium", "medium", 395000, 359000, 18, 1, "https://images.unsplash.com/photo-1632207691143-643e2a9a9361?w=800&q=80"),
-    ProductSeed("cay-phong-thuy", "Cay Phat Tai Bup Sen", "Dang than dep, hop sanh nho va goc cau thang.", "Lon", "medium", "medium", "medium", 820000, 759000, 10, 1, "https://images.unsplash.com/photo-1509423350716-97f9360b4e09?w=800&q=80"),
+    ProductSeed("cay-noi-that", "Cây Bạch Mã Galaxy", "Cây nội thất có tán lá sáng, hợp phòng khách và studio.", "Vừa", "easy", "medium", "medium", 420000, 389000, 26, 1, "https://images.unsplash.com/photo-1545241047-6083a3684587?w=800&q=80"),
+    ProductSeed("cay-noi-that", "Cây Monstera Cột Gạch", "Dáng lá xẻ đẹp, phù hợp căn hộ có ánh sáng tán xạ.", "Lớn", "medium", "medium", "medium", 690000, None, 18, 1, "https://images.unsplash.com/photo-1614594975525-e45190c55d0b?w=800&q=80"),
+    ProductSeed("cay-noi-that", "Cây Philodendron Ring", "Form lá mềm, để lên kệ TV và bàn console.", "Vừa", "easy", "low", "medium", 360000, 329000, 22, 0, "https://images.unsplash.com/photo-1501004318641-b39e6451bec6?w=800&q=80"),
+    ProductSeed("cay-van-phong", "Cây Kim Ngân Mini", "Dáng thân gọn, hợp bàn làm việc và quầy lễ tân.", "Nhỏ", "easy", "medium", "low", 310000, None, 30, 1, "https://images.unsplash.com/photo-1466692476868-aef1dfb1e735?w=800&q=80"),
+    ProductSeed("cay-van-phong", "Cây Lưỡi Hổ Tròn Chậu Xi Măng", "Màu lá đậm, dễ chăm và phù hợp người bận rộn.", "Vừa", "easy", "low", "low", 290000, None, 35, 1, "https://images.unsplash.com/photo-1593482892290-f54927ae1bb6?w=800&q=80"),
+    ProductSeed("cay-van-phong", "Cây Trường Sinh Marble", "Hợp cửa sổ nhiều sáng, tạo điểm nhấn trên bàn họp.", "Nhỏ", "easy", "medium", "medium", 255000, 229000, 28, 0, "https://images.unsplash.com/photo-1512428813834-c702c7702b78?w=800&q=80"),
+    ProductSeed("cay-sen-da", "Sen Đá Kem Hồng", "Chậu sen đá tông pastel để trưng bày trên kệ nhỏ.", "Nhỏ", "easy", "high", "low", 175000, None, 40, 0, "https://images.unsplash.com/photo-1542090675-da82b9a9d923?w=800&q=80"),
+    ProductSeed("cay-sen-da", "Sen Đá Lima Mix", "Set 3 chậu mix màu, hợp làm quà tặng văn phòng.", "Nhỏ", "easy", "high", "low", 210000, 189000, 34, 1, "https://images.unsplash.com/photo-1459156212016-c812468e2115?w=800&q=80"),
+    ProductSeed("cay-sen-da", "Sen Đá Vườn Sỏi", "Phong cách tối giản cho bàn học và bàn trang điểm.", "Nhỏ", "easy", "high", "low", 160000, None, 46, 0, "https://images.unsplash.com/photo-1519331379826-f10be5486c6f?w=800&q=80"),
+    ProductSeed("cay-thuy-sinh", "Cây Lan Nước Mini", "Dáng gọn đẹp, có thể trồng trong bình thủy tinh.", "Nhỏ", "medium", "medium", "high", 240000, None, 20, 0, "https://images.unsplash.com/photo-1520412099551-62b6bafeb5bb?w=800&q=80"),
+    ProductSeed("cay-thuy-sinh", "Cây Trâm Nước Decor", "Tạo góc xanh cho kệ sách và không gian cafe.", "Vừa", "medium", "medium", "high", 330000, 299000, 16, 0, "https://images.unsplash.com/photo-1509423350716-97f9360b4e09?w=800&q=80"),
+    ProductSeed("cay-phong-thuy", "Cây Ngọc Bích Tài Lộc", "Tặng thông điệp may mắn, hợp khai trương và tân gia.", "Vừa", "easy", "medium", "low", 350000, None, 25, 1, "https://images.unsplash.com/photo-1585320806297-9794b3e4eeae?w=800&q=80"),
+    ProductSeed("cay-phong-thuy", "Cây Vạn Lộc Đỏ", "Tông màu nổi bật, hợp quầy thu ngân và phòng tiếp khách.", "Vừa", "medium", "medium", "medium", 395000, 359000, 18, 1, "https://images.unsplash.com/photo-1632207691143-643e2a9a9361?w=800&q=80"),
+    ProductSeed("cay-phong-thuy", "Cây Phát Tài Búp Sen", "Dáng thân đẹp, hợp sảnh nhỏ và góc cầu thang.", "Lớn", "medium", "medium", "medium", 820000, 759000, 10, 1, "https://images.unsplash.com/photo-1509423350716-97f9360b4e09?w=800&q=80"),
 ]
 
-FIRST_NAMES = ["An", "Binh", "Chi", "Dung", "Giang", "Hanh", "Khanh", "Linh", "Minh", "Nam", "Ngoc", "Phuong", "Quynh", "Son", "Trang", "Vy"]
-LAST_NAMES = ["Nguyen", "Tran", "Le", "Pham", "Hoang", "Vu", "Dang", "Do"]
+FIRST_NAMES = ["An", "Bình", "Chi", "Dũng", "Giang", "Hạnh", "Khánh", "Linh", "Minh", "Nam", "Ngọc", "Phương", "Quỳnh", "Sơn", "Trang", "Vy"]
+LAST_NAMES = ["Nguyễn", "Trần", "Lê", "Phạm", "Hoàng", "Vũ", "Đặng", "Đỗ"]
 PROVINCES = [
     ("TP.HCM", [("Thu Duc", "Linh Chieu"), ("Quan 1", "Ben Nghe"), ("Quan 7", "Tan Phong")]),
-    ("Ha Noi", [("Cau Giay", "Dich Vong"), ("Dong Da", "Lang Thuong"), ("Nam Tu Liem", "My Dinh 1")]),
-    ("Da Nang", [("Hai Chau", "Hai Chau 1"), ("Thanh Khe", "Tam Thuan")]),
+    ("Hà Nội", [("Cầu Giấy", "Dịch Vọng"), ("Đống Đa", "Láng Thượng"), ("Nam Từ Liêm", "Mỹ Đình 1")]),
+    ("Đà Nẵng", [("Hải Châu", "Hải Châu 1"), ("Thanh Khê", "Tam Thuận")]),
 ]
 ORDER_NOTES = [
-    "Giao gio hanh chinh",
-    "Lien he truoc khi giao",
-    "De hang tai le tan",
-    "Goi ky de tang qua",
+    "Giao giờ hành chính",
+    "Liên hệ trước khi giao",
+    "Để hàng tại lễ tân",
+    "Gói kỹ để tặng quà",
 ]
 REVIEW_COMMENTS = [
-    "Cay dep, dung mo ta va dong goi chac chan.",
-    "La cay xanh khoe, chau gon gang va sach se.",
-    "Giao nhanh, cay den tay van rat tuoi.",
-    "Mau la dep, rat hop trung bay trong nha.",
-    "Chat luong on, minh se quay lai mua tiep.",
+    "Cây đẹp, đúng mô tả và đóng gói chắc chắn.",
+    "Lá cây xanh khỏe, chậu gọn gàng và sạch sẽ.",
+    "Giao nhanh, cây đến tay vẫn rất tươi.",
+    "Màu lá đẹp, rất hợp trưng bày trong nhà.",
+    "Chất lượng ổn, mình sẽ quay lại mua tiếp.",
 ]
 
 
@@ -182,7 +182,7 @@ def build_users(run_key: str, count: int, rng: random.Random) -> list[dict[str, 
                 "province": province,
                 "district": district,
                 "ward": ward,
-                "address_line": f"{street_number} duong seed {index}",
+                "address_line": f"{street_number} đường seed {index}",
             }
         )
     return users

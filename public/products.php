@@ -313,7 +313,7 @@ include 'includes/header.php';
                                     <?= clean($product['short_description'] ?? substr($product['description'] ?? '', 0, 100)) ?>
                                 </p>
                                 
-                                <div class="mt-auto flex items-center justify-between">
+                                <div class="mt-auto flex items-center justify-between gap-3">
                                     <?php if (!empty($product['sale_price']) && $product['sale_price'] > 0 && $product['sale_price'] < $product['price']): ?>
                                         <div class="flex flex-col">
                                             <span class="text-xs text-text-secondary line-through"><?= format_currency($product['price']) ?></span>
@@ -322,10 +322,17 @@ include 'includes/header.php';
                                     <?php else: ?>
                                         <span class="text-xl font-extrabold text-primary"><?= format_currency($product['price']) ?></span>
                                     <?php endif; ?>
-                                    
-                                    <button class="size-10 rounded-full bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/30 hover:bg-primary-dark active:scale-95 transition-all" title="Thêm vào giỏ hàng">
-                                        <span class="material-symbols-outlined text-[20px]">add_shopping_cart</span>
-                                    </button>
+
+                                    <form action="cart.php" method="POST">
+                                        <input type="hidden" name="csrf_token" value="<?= clean(csrf_token()) ?>">
+                                        <input type="hidden" name="action" value="add">
+                                        <input type="hidden" name="product_id" value="<?= (int)$product['id'] ?>">
+                                        <input type="hidden" name="quantity" value="1">
+                                        <input type="hidden" name="redirect_to" value="<?= clean(basename($_SERVER['REQUEST_URI'] ?? 'products.php')) ?>">
+                                        <button type="submit" class="size-10 rounded-full bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/30 hover:bg-primary-dark active:scale-95 transition-all" title="Thêm vào giỏ hàng">
+                                            <span class="material-symbols-outlined text-[20px]">add_shopping_cart</span>
+                                        </button>
+                                    </form>
                                 </div>
                             </div>
                         </article>

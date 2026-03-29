@@ -47,6 +47,12 @@
 </head>
 <body class="bg-background-light dark:bg-background-dark font-display text-text-main dark:text-white antialiased selection:bg-primary selection:text-white">
 <div class="relative flex min-h-screen w-full flex-col overflow-x-hidden">
+<?php
+$flash = get_flash();
+$currentUser = get_user();
+$currentUserName = get_user_name();
+$cartCount = cart_item_count();
+?>
 
 <!-- Header -->
 <header class="sticky top-0 z-50 w-full border-b border-[#e9f2ec] dark:border-[#2a3b30] bg-background-light/95 dark:bg-background-dark/95 backdrop-blur-md">
@@ -78,17 +84,48 @@
                 <button onclick="toggleMobileSearch()" class="flex size-10 items-center justify-center rounded-full hover:bg-[#e9f2ec] dark:hover:bg-[#1f2e25] transition-colors lg:hidden">
                     <span class="material-symbols-outlined text-text-main dark:text-white">search</span>
                 </button>
-                <button class="flex size-10 items-center justify-center rounded-full hover:bg-[#e9f2ec] dark:hover:bg-[#1f2e25] transition-colors">
-                    <span class="material-symbols-outlined text-text-main dark:text-white">person</span>
-                </button>
-                <button class="relative flex size-10 items-center justify-center rounded-full hover:bg-[#e9f2ec] dark:hover:bg-[#1f2e25] transition-colors">
+                <?php if ($currentUser): ?>
+                    <a href="profile.php" class="flex size-10 items-center justify-center rounded-full hover:bg-[#e9f2ec] dark:hover:bg-[#1f2e25] transition-colors" title="<?= clean($currentUserName ?? 'Tài khoản') ?>">
+                        <span class="material-symbols-outlined text-text-main dark:text-white">person</span>
+                    </a>
+                    <form action="logout.php" method="POST">
+                        <input type="hidden" name="csrf_token" value="<?= clean(csrf_token()) ?>">
+                        <button type="submit" class="flex size-10 items-center justify-center rounded-full hover:bg-[#e9f2ec] dark:hover:bg-[#1f2e25] transition-colors" title="Đăng xuất">
+                            <span class="material-symbols-outlined text-text-main dark:text-white">logout</span>
+                        </button>
+                    </form>
+                <?php else: ?>
+                    <a href="login.php" class="flex size-10 items-center justify-center rounded-full hover:bg-[#e9f2ec] dark:hover:bg-[#1f2e25] transition-colors" title="Đăng nhập">
+                        <span class="material-symbols-outlined text-text-main dark:text-white">person</span>
+                    </a>
+                <?php endif; ?>
+                <a href="cart.php" class="relative flex size-10 items-center justify-center rounded-full hover:bg-[#e9f2ec] dark:hover:bg-[#1f2e25] transition-colors" title="Giỏ hàng">
                     <span class="material-symbols-outlined text-text-main dark:text-white">shopping_bag</span>
-                    <span class="absolute right-1 top-1 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-white">2</span>
-                </button>
+                    <?php if ($cartCount > 0): ?>
+                        <span class="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white"><?= $cartCount ?></span>
+                    <?php endif; ?>
+                </a>
             </div>
         </div>
     </div>
 </header>
+
+<?php if ($flash): ?>
+<?php $isSuccessFlash = ($flash['type'] ?? '') === 'success'; ?>
+<div id="flashToastWrapper" class="fixed left-1/2 top-24 z-[70] w-full max-w-xl -translate-x-1/2 px-4 transition-all duration-300">
+    <div
+        id="flashToast"
+        data-flash-type="<?= clean((string)($flash['type'] ?? '')) ?>"
+        class="pointer-events-auto flex items-start gap-3 rounded-2xl border px-4 py-3 text-sm font-medium shadow-2xl transition-all duration-300 <?= $isSuccessFlash ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-800' ?>"
+    >
+        <span class="material-symbols-outlined text-[20px]"><?= $isSuccessFlash ? 'check_circle' : 'error' ?></span>
+        <p class="flex-1 pr-2"><?= clean($flash['message'] ?? '') ?></p>
+        <button type="button" id="flashToastClose" class="inline-flex size-7 items-center justify-center rounded-full transition-colors hover:bg-black/5" aria-label="Close notification">
+            <span class="material-symbols-outlined text-[18px]">close</span>
+        </button>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Mobile Search Modal -->
 <div id="mobileSearchModal" class="hidden fixed inset-0 z-50 bg-black/50 backdrop-blur-sm">
@@ -149,4 +186,35 @@ document.addEventListener('keydown', function(e) {
         }
     }
 });
+
+const flashToastWrapper = document.getElementById('flashToastWrapper');
+const flashToast = document.getElementById('flashToast');
+const flashToastClose = document.getElementById('flashToastClose');
+
+function hideFlashToast() {
+    if (!flashToastWrapper || !flashToast) {
+        return;
+    }
+
+    flashToast.classList.add('opacity-0', '-translate-y-3');
+    flashToastWrapper.classList.add('pointer-events-none');
+
+    window.setTimeout(() => {
+        flashToastWrapper.remove();
+    }, 300);
+}
+
+if (flashToastWrapper && flashToast) {
+    flashToast.classList.add('opacity-0', '-translate-y-3');
+
+    window.requestAnimationFrame(() => {
+        flashToast.classList.remove('opacity-0', '-translate-y-3');
+    });
+
+    flashToastClose?.addEventListener('click', hideFlashToast);
+
+    if (flashToast.dataset.flashType === 'success') {
+        window.setTimeout(hideFlashToast, 3200);
+    }
+}
 </script>

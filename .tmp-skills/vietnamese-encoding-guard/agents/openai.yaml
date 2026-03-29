@@ -1,0 +1,4 @@
+interface:
+  display_name: "Vietnamese Encoding Guard"
+  short_description: "Protect Vietnamese text from corruption"
+  default_prompt: "Use $vietnamese-encoding-guard to edit Vietnamese text safely and block unsafe writes."

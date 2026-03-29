@@ -121,8 +121,11 @@ include 'includes/header.php';
                     </span>
                 </div>
 
-                <form class="mb-6 space-y-4" action="cart/add" method="POST">
+                <form class="mb-6 space-y-4" action="cart.php" method="POST">
+                    <input type="hidden" name="csrf_token" value="<?= clean(csrf_token()) ?>">
+                    <input type="hidden" name="action" value="add">
                     <input type="hidden" name="product_id" value="<?= (int)$product['id'] ?>">
+                    <input type="hidden" name="redirect_to" value="<?= clean('product-detail.php?slug=' . $product['slug']) ?>">
 
                     <div class="flex items-center gap-4">
                         <label class="block text-sm font-bold text-text-main dark:text-white">Số lượng</label>

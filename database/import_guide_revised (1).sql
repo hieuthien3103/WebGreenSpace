@@ -8,7 +8,7 @@
 -- 2. sample_data_revised.sql
 --
 -- Không nên import schema.sql cũ nữa nếu bạn muốn đồng bộ
--- với system_design.md, api_contract_php.md và flow thanh toán mô phng.
+-- với system_design.md, api_contract_php.md và flow thanh toán mô phỏng.
 
 -- ========================================
 -- CÁCH 1: IMPORT BẰNG phpMyAdmin

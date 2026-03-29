@@ -104,6 +104,45 @@ function get_user(): ?array {
 }
 
 /**
+ * Get current user display name.
+ *
+ * @return string|null
+ */
+function get_user_name(): ?string {
+    $user = get_user();
+
+    if (!$user) {
+        return null;
+    }
+
+    if (!empty($user['full_name'])) {
+        return $user['full_name'];
+    }
+
+    return $user['username'] ?? null;
+}
+
+/**
+ * Get total quantity stored in the session cart.
+ *
+ * @return int
+ */
+function cart_item_count(): int {
+    $cart = $_SESSION['cart'] ?? [];
+
+    if (!is_array($cart)) {
+        return 0;
+    }
+
+    $total = 0;
+    foreach ($cart as $item) {
+        $total += max(0, (int)($item['quantity'] ?? 0));
+    }
+
+    return $total;
+}
+
+/**
  * Set flash message
  * 
  * @param string $type Message type
@@ -182,6 +221,65 @@ function create_slug(string $string): string {
  */
 function is_valid_email(string $email): bool {
     return filter_var($email, FILTER_VALIDATE_EMAIL) !== false;
+}
+
+/**
+ * Generate and store a CSRF token.
+ *
+ * @return string
+ */
+function csrf_token(): string {
+    if (empty($_SESSION['csrf_token'])) {
+        $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+    }
+
+    return $_SESSION['csrf_token'];
+}
+
+/**
+ * Validate a submitted CSRF token.
+ *
+ * @param string|null $token
+ * @return bool
+ */
+function verify_csrf_token(?string $token): bool {
+    if (empty($_SESSION['csrf_token']) || empty($token)) {
+        return false;
+    }
+
+    return hash_equals($_SESSION['csrf_token'], $token);
+}
+
+/**
+ * Resolve a safe internal redirect target.
+ *
+ * @param string|null $target
+ * @param string $fallback
+ * @return string
+ */
+function safe_redirect_target(?string $target, string $fallback = 'home.php'): string {
+    if (empty($target)) {
+        return $fallback;
+    }
+
+    $target = trim($target);
+    if ($target === '') {
+        return $fallback;
+    }
+
+    if (preg_match('#^(?:https?:)?//#i', $target) === 1) {
+        return $fallback;
+    }
+
+    if (str_contains($target, "\r") || str_contains($target, "\n")) {
+        return $fallback;
+    }
+
+    if (!str_starts_with($target, '/')) {
+        return $target;
+    }
+
+    return ltrim($target, '/');
 }
 
 /**

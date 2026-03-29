@@ -30,6 +30,12 @@ class CheckoutService {
             return ['success' => false, 'errors' => ['general' => 'Giỏ hàng đang trống.']];
         }
 
+        $selectedAddressId = max(0, (int)($data['selected_address_id'] ?? 0));
+        $selectedAddress = $selectedAddressId > 0
+            ? $this->addressModel->getByIdForUser($userId, $selectedAddressId)
+            : null;
+        $shouldSaveAsDefault = !empty($data['save_as_default']);
+
         $payload = [
             'full_name' => trim((string)($data['full_name'] ?? '')),
             'email' => strtolower(trim((string)($data['email'] ?? ''))),
@@ -41,6 +47,15 @@ class CheckoutService {
             'note' => trim((string)($data['note'] ?? '')),
             'payment_method' => (string)($data['payment_method'] ?? 'cod'),
         ];
+
+        if ($selectedAddress) {
+            $payload['full_name'] = (string)$selectedAddress['receiver_name'];
+            $payload['phone'] = (string)$selectedAddress['phone'];
+            $payload['province'] = (string)$selectedAddress['province'];
+            $payload['district'] = (string)$selectedAddress['district'];
+            $payload['ward'] = (string)($selectedAddress['ward'] ?? '');
+            $payload['address_line'] = (string)$selectedAddress['address_line'];
+        }
 
         $errors = $this->validateCheckout($payload);
         if (!empty($errors)) {
@@ -56,14 +71,18 @@ class CheckoutService {
                 'phone' => $payload['phone'],
             ]);
 
-            $this->addressModel->saveDefault($userId, [
-                'receiver_name' => $payload['full_name'],
-                'phone' => $payload['phone'],
-                'province' => $payload['province'],
-                'district' => $payload['district'],
-                'ward' => $payload['ward'],
-                'address_line' => $payload['address_line'],
-            ]);
+            if ($selectedAddress && $shouldSaveAsDefault) {
+                $this->addressModel->setDefaultById($userId, (int)$selectedAddress['id']);
+            } elseif (!$selectedAddress && $shouldSaveAsDefault) {
+                $this->addressModel->saveDefault($userId, [
+                    'receiver_name' => $payload['full_name'],
+                    'phone' => $payload['phone'],
+                    'province' => $payload['province'],
+                    'district' => $payload['district'],
+                    'ward' => $payload['ward'],
+                    'address_line' => $payload['address_line'],
+                ]);
+            }
 
             $fullAddress = $this->formatAddress($payload);
             $isOnlineMock = $payload['payment_method'] === 'online_mock';
@@ -102,7 +121,7 @@ class CheckoutService {
                 'status' => $isOnlineMock ? 'paid' : 'unpaid',
                 'amount' => $summary['total'],
                 'paid_at' => $isOnlineMock ? date('Y-m-d H:i:s') : null,
-                'note' => $isOnlineMock ? 'Mock online payment completed.' : 'Thanh toán khi nhận hàng.',
+                'note' => $isOnlineMock ? 'Thanh toán mô phỏng đã được xác nhận.' : 'Thanh toán khi nhận hàng.',
             ]);
 
             $conn->commit();

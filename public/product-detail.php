@@ -234,6 +234,32 @@ include 'includes/header.php';
 </main>
 
 <script>
+function updateQuantityValidity(input) {
+    if (!input) {
+        return;
+    }
+
+    input.setCustomValidity('');
+
+    const min = parseInt(input.min, 10) || 1;
+    const max = parseInt(input.max, 10) || min;
+    const value = parseInt(input.value, 10);
+
+    if (input.validity.badInput || Number.isNaN(value)) {
+        input.setCustomValidity('Vui lòng nhập số lượng hợp lệ.');
+        return;
+    }
+
+    if (input.validity.rangeUnderflow || value < min) {
+        input.setCustomValidity(`Vui lòng chọn ít nhất ${min} sản phẩm.`);
+        return;
+    }
+
+    if (input.validity.rangeOverflow || value > max) {
+        input.setCustomValidity(`Vui lòng chọn số lượng ít hơn hoặc bằng số lượng hiện có (${max} sản phẩm).`);
+    }
+}
+
 function changeImage(thumb) {
     const mainImage = document.getElementById('mainImage');
     const thumbImg = thumb.querySelector('img');
@@ -266,6 +292,8 @@ function incrementQty() {
     if (current < max) {
         input.value = current + 1;
     }
+
+    updateQuantityValidity(input);
 }
 
 function decrementQty() {
@@ -275,6 +303,15 @@ function decrementQty() {
     if (current > 1) {
         input.value = current - 1;
     }
+
+    updateQuantityValidity(input);
+}
+
+const quantityInput = document.getElementById('quantity');
+if (quantityInput) {
+    ['input', 'change', 'invalid'].forEach((eventName) => {
+        quantityInput.addEventListener(eventName, () => updateQuantityValidity(quantityInput));
+    });
 }
 </script>
 

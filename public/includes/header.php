@@ -1,3 +1,6 @@
+<?php
+require_once __DIR__ . '/../../config/config.php';
+?>
 <!DOCTYPE html>
 <html class="light" lang="vi">
 <head>

@@ -4,8 +4,10 @@ require_once __DIR__ . '/bootstrap.php';
 $dashboardService = new AdminDashboardService();
 $dashboard = $dashboardService->getDashboardData();
 $stats = $dashboard['stats'];
+$categorySummary = $dashboard['category_summary'];
 $recentOrders = $dashboard['recent_orders'];
 $recentUsers = $dashboard['recent_users'];
+$topCategories = $dashboard['top_categories'];
 $topProducts = $dashboard['top_products'];
 $lowStockProducts = $dashboard['low_stock_products'];
 
@@ -30,6 +32,69 @@ render_admin_header('Dashboard');
                 </div>
             </article>
         <?php endforeach; ?>
+    </section>
+
+    <section class="rounded-[2rem] border border-[#d9e9de] bg-white p-6 shadow-sm">
+        <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+                <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Danh mục</p>
+                <h2 class="mt-2 text-2xl font-extrabold text-[#102118]">Tổng quan danh mục để quản trị nhanh</h2>
+                <p class="mt-2 text-sm text-[#6e8d7b]">Theo dõi nhanh sức khỏe hệ thống danh mục và mở thẳng sang trang quản lý khi cần chỉnh sửa.</p>
+            </div>
+            <a href="categories.php" class="inline-flex items-center rounded-full border border-[#d9e9de] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">
+                Mở CRUD danh mục
+            </a>
+        </div>
+
+        <div class="mt-6 grid gap-6 xl:grid-cols-[1.1fr_0.9fr]">
+            <div class="grid gap-4 sm:grid-cols-2">
+                <?php foreach ($categorySummary as $card): ?>
+                    <article class="rounded-[1.5rem] border border-[#edf4ef] bg-[#f8fbf9] p-5">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-sm font-semibold text-[#587766]"><?= clean($card['label']) ?></p>
+                                <p class="mt-3 text-3xl font-extrabold text-[#102118]"><?= clean((string)$card['value']) ?></p>
+                                <p class="mt-2 text-sm text-[#6e8d7b]"><?= clean($card['hint']) ?></p>
+                            </div>
+                            <span class="flex size-11 items-center justify-center rounded-2xl bg-white text-[#2e9b63] shadow-sm">
+                                <span class="material-symbols-outlined"><?= clean($card['icon']) ?></span>
+                            </span>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+
+            <article class="rounded-[1.5rem] border border-[#edf4ef] bg-[#102118] p-5 text-white">
+                <div class="flex items-center justify-between gap-3">
+                    <div>
+                        <p class="text-sm font-semibold uppercase tracking-[0.18em] text-white/65">Xếp hạng</p>
+                        <h3 class="mt-2 text-xl font-extrabold">Danh mục nổi bật</h3>
+                    </div>
+                    <a href="categories.php" class="text-sm font-semibold text-white/80 transition-colors hover:text-white">Quản lý</a>
+                </div>
+
+                <div class="mt-5 space-y-3">
+                    <?php foreach ($topCategories as $category): ?>
+                        <article class="rounded-[1.25rem] bg-white/10 px-4 py-4">
+                            <div class="flex items-start justify-between gap-3">
+                                <div>
+                                    <p class="font-bold"><?= clean($category['name']) ?></p>
+                                    <p class="mt-1 text-sm text-white/70"><?= clean($category['parent_name'] ?? 'Danh mục gốc') ?></p>
+                                </div>
+                                <span class="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
+                                    <?= $category['status'] === 'active' ? 'Đang hiển thị' : 'Đang ẩn' ?>
+                                </span>
+                            </div>
+                            <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-white/80">
+                                <span>Đang bán: <strong class="text-white"><?= clean((string)$category['active_product_count']) ?></strong></span>
+                                <span>Tổng SP: <strong class="text-white"><?= clean((string)$category['product_count']) ?></strong></span>
+                            </div>
+                            <a href="categories.php?edit=<?= clean((string)$category['id']) ?>" class="mt-4 inline-flex text-sm font-semibold text-[#9fe3bd] hover:text-white">Chỉnh sửa danh mục</a>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+            </article>
+        </div>
     </section>
 
     <section class="grid gap-8 xl:grid-cols-[1.15fr_0.85fr]">

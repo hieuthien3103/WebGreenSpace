@@ -39,12 +39,12 @@
 - [X] Tính tổng tiền
 
 ## 6. Đặt hàng
-- [ ] Form checkout
-- [ ] Tạo order
-- [ ] Tạo order_items
-- [ ] Trừ tồn kho
-- [ ] Xóa giỏ hàng
-- [ ] Dùng transaction
+- [X] Form checkout
+- [X] Tạo order
+- [X] Tạo order_items
+- [X] Trừ tồn kho
+- [X] Xóa giỏ hàng
+- [X] Dùng transaction
 
 ## 7. Thanh toán mô phỏng
 - [ ] COD

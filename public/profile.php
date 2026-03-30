@@ -56,6 +56,30 @@ function profile_validate_address_form(array $values): array {
     return $errors;
 }
 
+function profile_order_status_meta(string $status): array {
+    $map = [
+        'pending' => ['label' => 'Chờ xác nhận', 'class' => 'bg-[#fff7e8] text-[#b7791f]'],
+        'confirmed' => ['label' => 'Đã xác nhận', 'class' => 'bg-[#edf8f1] text-[#2e9b63]'],
+        'processing' => ['label' => 'Đang chuẩn bị', 'class' => 'bg-[#eef4ff] text-[#3758c7]'],
+        'shipping' => ['label' => 'Đang giao', 'class' => 'bg-[#eef6ff] text-[#2563eb]'],
+        'completed' => ['label' => 'Hoàn tất', 'class' => 'bg-[#eafaf0] text-[#157347]'],
+        'cancelled' => ['label' => 'Đã hủy', 'class' => 'bg-[#fdecec] text-[#c43d3d]'],
+    ];
+
+    return $map[$status] ?? ['label' => ucfirst($status), 'class' => 'bg-[#f2f4f3] text-text-secondary'];
+}
+
+function profile_payment_status_meta(string $status): array {
+    $map = [
+        'paid' => ['label' => 'Đã thanh toán', 'class' => 'bg-[#edf8f1] text-[#2e9b63]'],
+        'unpaid' => ['label' => 'Chưa thanh toán', 'class' => 'bg-[#f2f4f3] text-text-secondary'],
+        'failed' => ['label' => 'Thanh toán lỗi', 'class' => 'bg-[#fdecec] text-[#c43d3d]'],
+        'refunded' => ['label' => 'Đã hoàn tiền', 'class' => 'bg-[#eef4ff] text-[#3758c7]'],
+    ];
+
+    return $map[$status] ?? ['label' => ucfirst($status), 'class' => 'bg-[#f2f4f3] text-text-secondary'];
+}
+
 $userModel = new User();
 $addressModel = new Address();
 $orderModel = new Order();
@@ -421,6 +445,10 @@ include 'includes/header.php';
                 <?php else: ?>
                     <div class="space-y-4">
                         <?php foreach ($orders as $order): ?>
+                            <?php
+                            $orderStatus = profile_order_status_meta((string)$order['order_status']);
+                            $paymentStatus = profile_payment_status_meta((string)$order['payment_status']);
+                            ?>
                             <article class="rounded-[1.5rem] border border-[#edf5ef] p-5 dark:border-[#24352b]">
                                 <div class="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                                     <div>
@@ -435,9 +463,15 @@ include 'includes/header.php';
                                 </div>
 
                                 <div class="mt-4 flex flex-wrap items-center gap-3 text-xs font-semibold">
-                                    <span class="rounded-full bg-[#edf8f1] px-3 py-1 text-primary dark:bg-[#0f2a1c]"><?= clean($order['order_status']) ?></span>
-                                    <span class="rounded-full bg-[#f2f4f3] px-3 py-1 text-text-secondary dark:bg-[#101914]"><?= clean($order['payment_status']) ?></span>
+                                    <span class="rounded-full px-3 py-1 <?= clean($orderStatus['class']) ?>"><?= clean($orderStatus['label']) ?></span>
+                                    <span class="rounded-full px-3 py-1 <?= clean($paymentStatus['class']) ?>"><?= clean($paymentStatus['label']) ?></span>
                                     <span class="text-text-secondary"><?= format_date($order['created_at'], 'd/m/Y H:i') ?></span>
+                                </div>
+
+                                <div class="mt-4">
+                                    <a href="order-detail.php?id=<?= clean((string)$order['id']) ?>" class="inline-flex items-center rounded-full border border-[#d8eadf] px-4 py-2 text-sm font-semibold text-text-main transition-colors hover:border-primary hover:text-primary dark:border-[#32483b] dark:text-white">
+                                        Xem chi tiết đơn hàng
+                                    </a>
                                 </div>
                             </article>
                         <?php endforeach; ?>

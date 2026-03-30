@@ -28,6 +28,8 @@ $router->get('/checkout', __DIR__ . '/checkout.php');
 $router->post('/checkout', __DIR__ . '/checkout.php');
 $router->get('/profile', __DIR__ . '/profile.php');
 $router->post('/profile', __DIR__ . '/profile.php');
+$router->get('/order-detail', __DIR__ . '/order-detail.php');
+$router->get('/profile/orders/{id}', __DIR__ . '/order-detail.php');
 
 // Contact
 $router->get('/contact', __DIR__ . '/contact.php');

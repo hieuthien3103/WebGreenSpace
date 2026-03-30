@@ -107,4 +107,57 @@ class Order {
 
         return $stmt->fetchAll();
     }
+
+    /**
+     * Get a full order detail with items and latest payment for one user.
+     */
+    public function getDetailByUserId(int $userId, int $orderId): ?array {
+        $query = "SELECT o.*,
+                         COUNT(od.id) AS item_count,
+                         COALESCE(SUM(od.quantity), 0) AS total_quantity
+                  FROM {$this->table} o
+                  LEFT JOIN order_details od ON od.order_id = o.id
+                  WHERE o.user_id = :user_id AND o.id = :order_id
+                  GROUP BY o.id
+                  LIMIT 1";
+
+        $stmt = $this->conn->prepare($query);
+        $stmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+        $stmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $order = $stmt->fetch();
+        if (!$order) {
+            return null;
+        }
+
+        $itemStmt = $this->conn->prepare(
+            "SELECT od.*,
+                    p.slug AS product_slug
+             FROM order_details od
+             INNER JOIN {$this->table} o ON o.id = od.order_id
+             LEFT JOIN products p ON p.id = od.product_id
+             WHERE o.user_id = :user_id AND od.order_id = :order_id
+             ORDER BY od.id ASC"
+        );
+        $itemStmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+        $itemStmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);
+        $itemStmt->execute();
+        $order['items'] = $itemStmt->fetchAll();
+
+        $paymentStmt = $this->conn->prepare(
+            "SELECT p.*
+             FROM payments p
+             INNER JOIN {$this->table} o ON o.id = p.order_id
+             WHERE o.user_id = :user_id AND p.order_id = :order_id
+             ORDER BY p.id DESC
+             LIMIT 1"
+        );
+        $paymentStmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+        $paymentStmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);
+        $paymentStmt->execute();
+        $order['payment'] = $paymentStmt->fetch() ?: null;
+
+        return $order;
+    }
 }

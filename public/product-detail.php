@@ -121,7 +121,7 @@ include 'includes/header.php';
                     </span>
                 </div>
 
-                <form class="mb-6 space-y-4" action="cart.php" method="POST">
+                <form class="mb-6 space-y-4" action="cart.php" method="POST" data-product-image="<?= clean($product['image_url'] ?? image_url('products/default.jpg')) ?>">
                     <input type="hidden" name="csrf_token" value="<?= clean(csrf_token()) ?>">
                     <input type="hidden" name="action" value="add">
                     <input type="hidden" name="product_id" value="<?= (int)$product['id'] ?>">

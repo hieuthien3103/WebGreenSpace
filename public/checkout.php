@@ -152,8 +152,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $result = $checkoutService->placeOrder($userId, $_POST);
 
             if (!empty($result['success'])) {
+                $orderId = max(0, (int)($result['order_id'] ?? 0));
+                $isOnlineMock = (string)($_POST['payment_method'] ?? '') === 'online_mock';
+
+                if ($isOnlineMock && $orderId > 0) {
+                    set_flash('success', 'Đơn hàng đã được tạo. Vui lòng xác nhận sau khi bạn hoàn tất chuyển khoản giả lập.');
+                    redirect('order-detail.php?id=' . urlencode((string)$orderId) . '#payment-confirmation');
+                }
+
                 set_flash('success', 'Đặt hàng thành công. Đơn của bạn đã được tạo.');
-                redirect('profile.php?tab=orders');
+                redirect('orders.php');
             }
 
             $errors = $result['errors'] ?? ['general' => 'Không thể thanh toán lúc này.'];
@@ -183,8 +191,8 @@ $paymentOptions = [
     ],
     [
         'value' => 'online_mock',
-        'title' => 'Online mock',
-        'description' => 'Mô phỏng thanh toán online để chạy demo đồ án.',
+        'title' => 'Chuyển khoản giả lập',
+        'description' => 'Nhận thông tin tài khoản mô phỏng và bấm "Tôi đã thanh toán" sau khi chuyển khoản.',
         'icon' => 'credit_card',
     ],
 ];
@@ -487,8 +495,8 @@ include 'includes/header.php';
                         <div class="mt-6 rounded-[1.5rem] bg-[#f6fbf7] px-4 py-4 text-sm text-[#456a57]">
                             <p class="font-semibold text-[#102118]">Lưu ý thanh toán</p>
                             <p class="mt-2 leading-6">
-                                Đơn dưới 500.000đ sẽ cộng thêm 30.000đ phí vận chuyển. Nếu chọn <strong>Online mock</strong>,
-                                hệ thống sẽ tự ghi nhận thanh toán để phục vụ demo.
+                                Đơn dưới 500.000đ sẽ cộng thêm 30.000đ phí vận chuyển. Nếu chọn <strong>Chuyển khoản giả lập</strong>,
+                                đơn sẽ ở trạng thái chưa thanh toán đến khi bạn bấm nút xác nhận trên trang chi tiết đơn.
                             </p>
                         </div>
                     </div>

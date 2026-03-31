@@ -46,6 +46,36 @@ require_once __DIR__ . '/../../config/config.php';
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
         }
+
+        .fly-to-cart-image {
+            position: fixed;
+            pointer-events: none;
+            z-index: 80;
+            border-radius: 0.75rem;
+            object-fit: cover;
+            box-shadow: 0 10px 28px rgba(0, 0, 0, 0.22);
+            will-change: transform, opacity;
+        }
+
+        .fly-to-cart-trail {
+            position: fixed;
+            pointer-events: none;
+            z-index: 79;
+            border-radius: 9999px;
+            background: radial-gradient(circle at 35% 35%, rgba(46, 204, 112, 0.45), rgba(46, 204, 112, 0.12));
+            filter: blur(0.4px);
+            will-change: transform, opacity;
+        }
+
+        .cart-bump {
+            animation: cart-bump 420ms ease;
+        }
+
+        @keyframes cart-bump {
+            0% { transform: scale(1); }
+            35% { transform: scale(1.16); }
+            100% { transform: scale(1); }
+        }
     </style>
 </head>
 <body class="bg-background-light dark:bg-background-dark font-display text-text-main dark:text-white antialiased selection:bg-primary selection:text-white">
@@ -102,11 +132,9 @@ $cartCount = cart_item_count();
                         <span class="material-symbols-outlined text-text-main dark:text-white">person</span>
                     </a>
                 <?php endif; ?>
-                <a href="cart.php" class="relative flex size-10 items-center justify-center rounded-full hover:bg-[#e9f2ec] dark:hover:bg-[#1f2e25] transition-colors" title="Giỏ hàng">
+                <a id="headerCartButton" href="cart.php" class="relative flex size-10 items-center justify-center rounded-full hover:bg-[#e9f2ec] dark:hover:bg-[#1f2e25] transition-colors" title="Giỏ hàng">
                     <span class="material-symbols-outlined text-text-main dark:text-white">shopping_bag</span>
-                    <?php if ($cartCount > 0): ?>
-                        <span class="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white"><?= $cartCount ?></span>
-                    <?php endif; ?>
+                    <span id="headerCartCount" class="absolute right-1 top-1 flex min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] font-bold text-white <?= $cartCount > 0 ? '' : 'hidden' ?>"><?= $cartCount ?></span>
                 </a>
             </div>
         </div>
@@ -220,4 +248,220 @@ if (flashToastWrapper && flashToast) {
         window.setTimeout(hideFlashToast, 3200);
     }
 }
+
+const CART_FLY_PRESETS = {
+    snappy: { duration: 520, arcMin: 26, arcMax: 86, arcFactor: 0.16, trailLag: 0.11 },
+    balanced: { duration: 720, arcMin: 36, arcMax: 120, arcFactor: 0.22, trailLag: 0.09 },
+    cinematic: { duration: 980, arcMin: 52, arcMax: 156, arcFactor: 0.32, trailLag: 0.075 },
+};
+
+let activeCartFlyPreset = 'cinematic';
+
+function getCartFlyPreset() {
+    return CART_FLY_PRESETS[activeCartFlyPreset] || CART_FLY_PRESETS.balanced;
+}
+
+window.setCartFlySpeedPreset = function setCartFlySpeedPreset(presetName) {
+    if (!Object.prototype.hasOwnProperty.call(CART_FLY_PRESETS, presetName)) {
+        return false;
+    }
+
+    activeCartFlyPreset = presetName;
+    return true;
+};
+
+window.getCartFlySpeedPreset = function getCartFlySpeedPreset() {
+    return activeCartFlyPreset;
+};
+
+function updateHeaderCartCount(nextCount) {
+    const cartCountBadge = document.getElementById('headerCartCount');
+    if (!cartCountBadge) {
+        return;
+    }
+
+    const count = Number.isFinite(nextCount) ? Math.max(0, Math.floor(nextCount)) : 0;
+    cartCountBadge.textContent = String(count);
+    cartCountBadge.classList.toggle('hidden', count <= 0);
+}
+
+function showCartActionToast(message, isSuccess = true) {
+    const toast = document.createElement('div');
+    toast.className = `fixed right-4 top-24 z-[72] max-w-sm rounded-xl border px-4 py-3 text-sm font-semibold shadow-xl transition-all duration-300 ${isSuccess ? 'border-green-200 bg-green-50 text-green-800' : 'border-red-200 bg-red-50 text-red-700'}`;
+    toast.textContent = message;
+    toast.style.opacity = '0';
+    toast.style.transform = 'translateY(-8px)';
+    document.body.appendChild(toast);
+
+    window.requestAnimationFrame(() => {
+        toast.style.opacity = '1';
+        toast.style.transform = 'translateY(0)';
+    });
+
+    window.setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(-8px)';
+        window.setTimeout(() => toast.remove(), 280);
+    }, 2200);
+}
+
+async function addToCartAsync(form) {
+    const payload = new FormData(form);
+    payload.set('ajax', '1');
+
+    const response = await fetch(form.getAttribute('action') || 'cart.php', {
+        method: 'POST',
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest',
+            'Accept': 'application/json',
+        },
+        body: payload,
+        credentials: 'same-origin',
+    });
+
+    let data;
+    try {
+        data = await response.json();
+    } catch (_error) {
+        showCartActionToast('Không thể thêm vào giỏ lúc này. Vui lòng thử lại.', false);
+        return;
+    }
+
+    const isSuccess = !!data.success;
+    updateHeaderCartCount(Number(data.cart_count || 0));
+    showCartActionToast(data.message || (isSuccess ? 'Đã thêm sản phẩm vào giỏ.' : 'Không thể thêm vào giỏ.'), isSuccess);
+}
+
+function animateAddToCart(form) {
+    const cartButton = document.getElementById('headerCartButton');
+    if (!cartButton) {
+        addToCartAsync(form).finally(() => {
+            delete form.dataset.animating;
+        });
+        return;
+    }
+
+    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        addToCartAsync(form).finally(() => {
+            delete form.dataset.animating;
+        });
+        return;
+    }
+
+    const imageSrc = form.dataset.productImage || '';
+    if (!imageSrc) {
+        addToCartAsync(form).finally(() => {
+            delete form.dataset.animating;
+        });
+        return;
+    }
+
+    const sourceImage = document.createElement('img');
+    sourceImage.src = imageSrc;
+    sourceImage.alt = '';
+    sourceImage.className = 'fly-to-cart-image';
+
+    const clickedButton = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const startRectSource = clickedButton && form.contains(clickedButton)
+        ? clickedButton.getBoundingClientRect()
+        : form.getBoundingClientRect();
+    const startSize = Math.max(44, Math.min(76, Math.min(startRectSource.width, startRectSource.height) || 56));
+    const startX = startRectSource.left + (startRectSource.width / 2) - (startSize / 2);
+    const startY = startRectSource.top + (startRectSource.height / 2) - (startSize / 2);
+
+    const cartRect = cartButton.getBoundingClientRect();
+    const endSize = 20;
+    const endX = cartRect.left + (cartRect.width / 2) - (endSize / 2);
+    const endY = cartRect.top + (cartRect.height / 2) - (endSize / 2);
+
+    sourceImage.style.left = `${startX}px`;
+    sourceImage.style.top = `${startY}px`;
+    sourceImage.style.width = `${startSize}px`;
+    sourceImage.style.height = `${startSize}px`;
+    sourceImage.style.opacity = '0.96';
+    sourceImage.style.transform = 'translate3d(0, 0, 0) scale(1)';
+    document.body.appendChild(sourceImage);
+
+    const trailDots = Array.from({ length: 3 }, (_, index) => {
+        const dot = document.createElement('span');
+        dot.className = 'fly-to-cart-trail';
+        const size = Math.max(8, 14 - index * 2);
+        dot.style.width = `${size}px`;
+        dot.style.height = `${size}px`;
+        dot.style.left = `${startX + (startSize / 2) - (size / 2)}px`;
+        dot.style.top = `${startY + (startSize / 2) - (size / 2)}px`;
+        dot.style.opacity = '0.55';
+        document.body.appendChild(dot);
+        return dot;
+    });
+
+    const deltaX = endX - startX;
+    const deltaY = endY - startY;
+    const preset = getCartFlyPreset();
+    const duration = preset.duration;
+    const arcHeight = Math.max(preset.arcMin, Math.min(preset.arcMax, Math.abs(deltaX) * preset.arcFactor + preset.arcMin));
+    const startTime = performance.now();
+
+    const easeOutQuint = (t) => 1 - Math.pow(1 - t, 5);
+
+    const runFrame = (now) => {
+        const elapsed = now - startTime;
+        const progress = Math.min(1, elapsed / duration);
+        const eased = easeOutQuint(progress);
+
+        const pathX = startX + deltaX * eased;
+        const pathY = startY + deltaY * eased - (Math.sin(progress * Math.PI) * arcHeight);
+        const scale = 1 - (0.76 * progress);
+        const opacity = 0.95 - (0.82 * progress);
+
+        sourceImage.style.opacity = `${Math.max(0.1, opacity)}`;
+        sourceImage.style.transform = `translate3d(${pathX - startX}px, ${pathY - startY}px, 0) scale(${Math.max(0.22, scale)}) rotate(${12 * progress}deg)`;
+
+        trailDots.forEach((dot, index) => {
+            const lag = (index + 1) * preset.trailLag;
+            const trailProgress = Math.max(0, progress - lag);
+            const trailEased = easeOutQuint(trailProgress);
+            const trailX = startX + deltaX * trailEased;
+            const trailY = startY + deltaY * trailEased - (Math.sin(trailProgress * Math.PI) * arcHeight);
+
+            dot.style.transform = `translate3d(${trailX - startX}px, ${trailY - startY}px, 0) scale(${Math.max(0.25, 1 - trailProgress)})`;
+            dot.style.opacity = `${Math.max(0, 0.45 - trailProgress * 0.55)}`;
+        });
+
+        if (progress < 1) {
+            window.requestAnimationFrame(runFrame);
+            return;
+        }
+
+        sourceImage.remove();
+        trailDots.forEach((dot) => dot.remove());
+        cartButton.classList.add('cart-bump');
+        window.setTimeout(() => cartButton.classList.remove('cart-bump'), 420);
+        addToCartAsync(form).finally(() => {
+            delete form.dataset.animating;
+        });
+    };
+
+    window.requestAnimationFrame(runFrame);
+}
+
+document.addEventListener('submit', (event) => {
+    const target = event.target;
+    if (!(target instanceof HTMLFormElement)) {
+        return;
+    }
+
+    const actionInput = target.querySelector('input[name="action"]');
+    const isAddAction = actionInput instanceof HTMLInputElement && actionInput.value === 'add';
+    const actionUrl = target.getAttribute('action') || '';
+    const isCartAction = actionUrl.endsWith('cart.php') || actionUrl === '/cart' || actionUrl.endsWith('/cart');
+
+    if (!isAddAction || !isCartAction || target.dataset.animating === '1') {
+        return;
+    }
+
+    event.preventDefault();
+    target.dataset.animating = '1';
+    animateAddToCart(target);
+});
 </script>

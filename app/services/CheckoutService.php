@@ -100,8 +100,8 @@ class CheckoutService {
                 'total_amount' => $summary['total'],
                 'coupon_code' => null,
                 'payment_method' => $payload['payment_method'],
-                'payment_status' => $isOnlineMock ? 'paid' : 'unpaid',
-                'order_status' => $isOnlineMock ? 'confirmed' : 'pending',
+                'payment_status' => 'unpaid',
+                'order_status' => 'pending',
             ]);
 
             foreach ($summary['items'] as $item) {
@@ -118,10 +118,12 @@ class CheckoutService {
             $this->orderModel->addPayment($orderId, [
                 'provider' => $payload['payment_method'],
                 'transaction_code' => $isOnlineMock ? 'MOCK' . date('YmdHis') . random_int(100, 999) : null,
-                'status' => $isOnlineMock ? 'paid' : 'unpaid',
+                'status' => 'unpaid',
                 'amount' => $summary['total'],
-                'paid_at' => $isOnlineMock ? date('Y-m-d H:i:s') : null,
-                'note' => $isOnlineMock ? 'Thanh toán mô phỏng đã được xác nhận.' : 'Thanh toán khi nhận hàng.',
+                'paid_at' => null,
+                'note' => $isOnlineMock
+                    ? 'Chờ khách xác nhận chuyển khoản giả lập.'
+                    : 'Thanh toán khi nhận hàng.',
             ]);
 
             $conn->commit();

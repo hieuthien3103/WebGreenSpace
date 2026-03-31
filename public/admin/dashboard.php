@@ -105,7 +105,7 @@ render_admin_header('Dashboard');
                         <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Đơn hàng</p>
                         <h2 class="mt-2 text-2xl font-extrabold text-[#102118]">Đơn hàng gần đây</h2>
                     </div>
-                    <a href="../profile.php?tab=orders" class="text-sm font-semibold text-[#2e9b63] hover:text-[#22784d]">Xem hồ sơ</a>
+                    <a href="orders.php" class="text-sm font-semibold text-[#2e9b63] hover:text-[#22784d]">Quản lý đơn hàng</a>
                 </div>
 
                 <div class="overflow-x-auto">
@@ -173,6 +173,7 @@ render_admin_header('Dashboard');
                 <div class="mb-5">
                     <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Người dùng</p>
                     <h2 class="mt-2 text-2xl font-extrabold text-[#102118]">Tài khoản mới</h2>
+                    <a href="users.php" class="mt-3 inline-flex text-sm font-semibold text-[#2e9b63] hover:text-[#22784d]">Quản lý user</a>
                 </div>
 
                 <div class="space-y-4">
@@ -228,6 +229,8 @@ render_admin_header('Dashboard');
                 <div class="mt-5 grid gap-3">
                     <a href="products.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">CRUD sản phẩm</a>
                     <a href="categories.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">CRUD danh mục</a>
+                    <a href="users.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">Quản lý user</a>
+                    <a href="orders.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">Quản lý đơn hàng</a>
                     <a href="admin_upload_images.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">Upload ảnh sản phẩm</a>
                     <a href="check_images.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">Kiểm tra dữ liệu ảnh</a>
                     <a href="clear_cache.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">Clear cache</a>

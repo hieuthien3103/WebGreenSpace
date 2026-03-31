@@ -109,7 +109,7 @@ function require_login(string $redirectTarget = 'home.php'): void {
 function require_admin(string $redirectTarget = 'admin/dashboard.php'): void {
     if (!is_logged_in()) {
         set_flash('error', 'Vui lòng đăng nhập bằng tài khoản admin.');
-        redirect('login.php?redirect=' . urlencode($redirectTarget));
+        redirect('admin/login.php?redirect=' . urlencode($redirectTarget));
     }
 
     if (is_admin()) {
@@ -315,6 +315,82 @@ function safe_redirect_target(?string $target, string $fallback = 'home.php'): s
     }
 
     return ltrim($target, '/');
+}
+
+/**
+ * Validate an external image URL.
+ *
+ * @param string $url
+ * @return string|null
+ */
+function validate_image_source_url(string $url): ?string {
+    $url = trim($url);
+
+    if ($url === '') {
+        return 'Vui lòng nhập URL hình ảnh.';
+    }
+
+    if (strlen($url) > 2048) {
+        return 'URL hình ảnh quá dài.';
+    }
+
+    if (!filter_var($url, FILTER_VALIDATE_URL)) {
+        return 'URL hình ảnh không hợp lệ.';
+    }
+
+    $scheme = strtolower((string)parse_url($url, PHP_URL_SCHEME));
+    if (!in_array($scheme, ['http', 'https'], true)) {
+        return 'Chỉ chấp nhận URL hình ảnh từ http hoặc https.';
+    }
+
+    return null;
+}
+
+/**
+ * Validate an uploaded image file.
+ *
+ * @param array $file
+ * @return array{valid: bool, error: string|null, extension?: string}
+ */
+function validate_uploaded_image(array $file): array {
+    if (($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+        return ['valid' => false, 'error' => 'Tải ảnh lên không thành công.'];
+    }
+
+    $tmpName = (string)($file['tmp_name'] ?? '');
+    if ($tmpName === '' || !is_uploaded_file($tmpName)) {
+        return ['valid' => false, 'error' => 'Không tìm thấy file upload hợp lệ.'];
+    }
+
+    $fileSize = (int)($file['size'] ?? 0);
+    if ($fileSize <= 0 || $fileSize > MAX_FILE_SIZE) {
+        return ['valid' => false, 'error' => 'Kích thước ảnh vượt quá giới hạn cho phép.'];
+    }
+
+    $extension = strtolower((string)pathinfo((string)($file['name'] ?? ''), PATHINFO_EXTENSION));
+    if ($extension === '' || !in_array($extension, ALLOWED_IMAGE_EXTENSIONS, true)) {
+        return ['valid' => false, 'error' => 'Định dạng ảnh không được hỗ trợ.'];
+    }
+
+    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+    $mimeType = $finfo ? (string)finfo_file($finfo, $tmpName) : '';
+    if ($finfo) {
+        finfo_close($finfo);
+    }
+
+    if ($mimeType === '' || !in_array($mimeType, ALLOWED_IMAGE_TYPES, true)) {
+        return ['valid' => false, 'error' => 'File tải lên không phải là ảnh hợp lệ.'];
+    }
+
+    if (getimagesize($tmpName) === false) {
+        return ['valid' => false, 'error' => 'Không thể đọc metadata của ảnh tải lên.'];
+    }
+
+    return [
+        'valid' => true,
+        'error' => null,
+        'extension' => $extension,
+    ];
 }
 
 /**

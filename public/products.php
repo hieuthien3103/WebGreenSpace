@@ -323,7 +323,7 @@ include 'includes/header.php';
                                         <span class="text-xl font-extrabold text-primary"><?= format_currency($product['price']) ?></span>
                                     <?php endif; ?>
 
-                                    <form action="cart.php" method="POST">
+                                    <form action="cart.php" method="POST" data-product-image="<?= clean($product['image_url'] ?? image_url('products/default.jpg')) ?>">
                                         <input type="hidden" name="csrf_token" value="<?= clean(csrf_token()) ?>">
                                         <input type="hidden" name="action" value="add">
                                         <input type="hidden" name="product_id" value="<?= (int)$product['id'] ?>">

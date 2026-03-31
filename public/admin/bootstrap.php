@@ -3,8 +3,9 @@ require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../config/database.php';
 
 if (!is_logged_in()) {
+    $redirectTarget = basename((string)parse_url($_SERVER['REQUEST_URI'] ?? 'dashboard.php', PHP_URL_PATH));
     set_flash('error', 'Vui lòng đăng nhập bằng tài khoản admin.');
-    redirect('../login.php?redirect=' . urlencode('admin/dashboard.php'));
+    redirect('login.php?redirect=' . urlencode($redirectTarget ?: 'dashboard.php'));
 }
 
 if (!is_admin()) {
@@ -15,8 +16,10 @@ if (!is_admin()) {
 function admin_nav_items(): array {
     return [
         'dashboard.php' => 'Dashboard',
+        'orders.php' => 'Quản lý đơn hàng',
         'products.php' => 'Quản lý sản phẩm',
         'categories.php' => 'Quản lý danh mục',
+        'users.php' => 'Quản lý user',
         'admin_upload_images.php' => 'Ảnh sản phẩm',
     ];
 }

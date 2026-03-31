@@ -14,6 +14,20 @@ class AuthService {
      * Attempt a login.
      */
     public function login(string $identifier, string $password): array {
+        return $this->attemptLogin($identifier, $password, false);
+    }
+
+    /**
+     * Attempt an admin-only login.
+     */
+    public function loginAdmin(string $identifier, string $password): array {
+        return $this->attemptLogin($identifier, $password, true);
+    }
+
+    /**
+     * Attempt a login with optional admin enforcement.
+     */
+    private function attemptLogin(string $identifier, string $password, bool $adminOnly): array {
         $identifier = trim($identifier);
         $errors = [];
 
@@ -40,6 +54,10 @@ class AuthService {
 
         if (!password_verify($password, $user['password'] ?? '')) {
             return ['success' => false, 'errors' => ['general' => 'Thông tin đăng nhập không đúng.']];
+        }
+
+        if ($adminOnly && (($user['role'] ?? 'user') !== 'admin')) {
+            return ['success' => false, 'errors' => ['general' => 'Tài khoản này không có quyền truy cập khu vực admin.']];
         }
 
         if (password_needs_rehash($user['password'], HASH_ALGO, ['cost' => HASH_COST])) {

@@ -87,7 +87,7 @@ INSERT INTO coupons (code, discount_type, discount_value, min_order_amount, usag
 -- ========================================
 -- ORDERS
 -- payment_method: cod | online_mock
--- payment_status: unpaid | paid | failed
+-- payment_status: unpaid | pending_review | paid | failed
 -- ========================================
 INSERT INTO orders (
     user_id, order_number, full_name, email, phone, address, note,

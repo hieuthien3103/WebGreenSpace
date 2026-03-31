@@ -3,7 +3,7 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 
 if (is_logged_in()) {
-    redirect('home.php');
+    redirect(is_admin() ? 'admin/dashboard.php' : 'home.php');
 }
 
 $pageTitle = 'Đăng nhập - GreenSpace';
@@ -13,6 +13,7 @@ $old = [
     'identifier' => '',
 ];
 $redirectTarget = safe_redirect_target($_GET['redirect'] ?? $_POST['redirect'] ?? 'home.php');
+$adminRedirect = str_starts_with($redirectTarget, 'admin/') ? substr($redirectTarget, 6) : 'dashboard.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $old['identifier'] = trim((string)($_POST['identifier'] ?? ''));
@@ -112,6 +113,12 @@ include 'includes/header.php';
                         Chưa có tài khoản?
                         <a href="signup.php<?= $redirectTarget !== 'home.php' ? '?redirect=' . urlencode($redirectTarget) : '' ?>" class="font-semibold text-primary hover:text-primary-dark">
                             Đăng ký ngay
+                        </a>
+                    </p>
+                    <p class="mt-3 text-sm text-text-secondary">
+                        Cần vào khu vực quản trị?
+                        <a href="admin/login.php<?= $adminRedirect !== 'dashboard.php' ? '?redirect=' . urlencode($adminRedirect) : '' ?>" class="font-semibold text-primary hover:text-primary-dark">
+                            Đăng nhập admin
                         </a>
                     </p>
                 </div>

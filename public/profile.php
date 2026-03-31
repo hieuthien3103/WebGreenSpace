@@ -62,6 +62,7 @@ function profile_order_status_meta(string $status): array {
         'confirmed' => ['label' => 'Đã xác nhận', 'class' => 'bg-[#edf8f1] text-[#2e9b63]'],
         'processing' => ['label' => 'Đang chuẩn bị', 'class' => 'bg-[#eef4ff] text-[#3758c7]'],
         'shipping' => ['label' => 'Đang giao', 'class' => 'bg-[#eef6ff] text-[#2563eb]'],
+        'delivered' => ['label' => 'Đã giao', 'class' => 'bg-[#eafaf0] text-[#157347]'],
         'completed' => ['label' => 'Hoàn tất', 'class' => 'bg-[#eafaf0] text-[#157347]'],
         'cancelled' => ['label' => 'Đã hủy', 'class' => 'bg-[#fdecec] text-[#c43d3d]'],
     ];
@@ -72,6 +73,7 @@ function profile_order_status_meta(string $status): array {
 function profile_payment_status_meta(string $status): array {
     $map = [
         'paid' => ['label' => 'Đã thanh toán', 'class' => 'bg-[#edf8f1] text-[#2e9b63]'],
+        'pending_review' => ['label' => 'Chờ admin duyệt', 'class' => 'bg-[#fff7e8] text-[#b7791f]'],
         'unpaid' => ['label' => 'Chưa thanh toán', 'class' => 'bg-[#f2f4f3] text-text-secondary'],
         'failed' => ['label' => 'Thanh toán lỗi', 'class' => 'bg-[#fdecec] text-[#c43d3d]'],
         'refunded' => ['label' => 'Đã hoàn tiền', 'class' => 'bg-[#eef4ff] text-[#3758c7]'],
@@ -429,12 +431,15 @@ include 'includes/header.php';
                 </section>
             </div>
 
-            <section class="rounded-[2rem] border border-[#e7f1ea] bg-white p-6 shadow-sm dark:border-[#24352b] dark:bg-[#16211b]">
+            <section id="orders" class="rounded-[2rem] border border-[#e7f1ea] bg-white p-6 shadow-sm dark:border-[#24352b] dark:bg-[#16211b]">
                 <div class="mb-6 flex items-center justify-between gap-3">
                     <div>
                         <h2 class="text-2xl font-extrabold text-text-main dark:text-white">Đơn hàng gần đây</h2>
                         <p class="mt-2 text-sm text-text-secondary">Thông tin này sẽ đồng bộ với đơn tạo từ trang checkout.</p>
                     </div>
+                    <a href="orders.php" class="inline-flex items-center rounded-full border border-[#d8eadf] px-4 py-2 text-sm font-semibold text-text-main transition-colors hover:border-primary hover:text-primary dark:border-[#32483b] dark:text-white">
+                        Xem tất cả
+                    </a>
                 </div>
 
                 <?php if (empty($orders)): ?>
@@ -458,7 +463,9 @@ include 'includes/header.php';
                                     </div>
                                     <div class="text-left sm:text-right">
                                         <p class="text-sm font-semibold text-text-main dark:text-white"><?= format_currency((float)$order['total_amount']) ?></p>
-                                        <p class="mt-1 text-xs text-text-secondary"><?= clean((string)$order['item_count']) ?> sản phẩm</p>
+                                        <p class="mt-1 text-xs text-text-secondary">
+                                            <?= clean((string)($order['total_quantity'] ?? $order['item_count'])) ?> sản phẩm
+                                        </p>
                                     </div>
                                 </div>
 

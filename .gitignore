@@ -65,3 +65,7 @@ $RECYCLE.BIN/
 sessions/
 tmp/
 temp/
+
+# Python cache
+__pycache__/
+*.pyc

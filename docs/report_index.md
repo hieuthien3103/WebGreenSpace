@@ -28,4 +28,3 @@ Tai lieu bao cao cho phan backend cua WebGreenSpace duoc tach thanh 4 phan de de
 ## Tai lieu lien quan
 
 - Checklist backend: [backend_checklist.md](./backend_checklist.md)
-- Tai lieu thiet ke cu: [system_design_web_ban_cay_xanh (1).md](./system_design_web_ban_cay_xanh%20(1).md)

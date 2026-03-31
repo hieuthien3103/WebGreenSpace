@@ -41,8 +41,8 @@ cd WebGreenSpace
 ```
 
 2. Configure database:
-- Import database schema from `database/schema.sql`
-- Import sample data from `database/sample_data.sql`
+- Import database schema from `database/schema_revised.sql`
+- Import sample data from `database/sample_data_revised.sql`
 - Update `config/config.php` with your database credentials
 
 3. Start development server:

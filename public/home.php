@@ -13,7 +13,7 @@ $currentPage = 'home';
 // Get featured products
 try {
     $productModel = new Product();
-    $featuredProducts = $productModel->getAll(8);
+    $featuredProducts = $productModel->getFeatured(8);
     $bestSellers = $productModel->getBestSellers(8);
     
     $categoryModel = new Category();

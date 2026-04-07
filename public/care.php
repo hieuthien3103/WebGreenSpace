@@ -1,4 +1,5 @@
-<?php 
+<?php
+require_once __DIR__ . '/../config/config.php';
 $pageTitle = 'Chăm sóc cây - GreenSpace';
 $currentPage = 'care';
 include 'includes/header.php'; 
@@ -89,7 +90,7 @@ include 'includes/header.php';
                         </p>
                         <div class="mt-auto flex items-center gap-4 text-sm text-text-secondary pt-4 border-t border-gray-100">
                             <div class="flex items-center"><span class="material-symbols-outlined text-blue-400 mr-1 text-lg">water_drop</span> Ít nước</div>
-                            <div class="flex items-center"><span class="material-symbols-outlined text-yellow-500 mr-1 text-lg">light_mode</span> Mọi đk</div>
+                            <div class="flex items-center"><span class="material-symbols-outlined text-yellow-500 mr-1 text-lg">light_mode</span> Mọi điều kiện</div>
                         </div>
                     </div>
                 </article>
@@ -200,7 +201,7 @@ include 'includes/header.php';
             <div class="bg-[#f5f5f5] dark:bg-[#1e2b24] p-6 rounded-2xl mb-8 relative overflow-hidden">
                 <div class="absolute -top-6 -right-6 w-24 h-24 bg-primary/10 rounded-full"></div>
                 <h3 class="text-lg font-bold text-text-main dark:text-white mb-2 relative z-10">Nhận mẹo chăm sóc</h3>
-                <p class="text-text-secondary dark:text-gray-400 text-sm mb-4 relative z-10">Đăng ký để nhận bài viết mới nhất và mã giảm giá hàng tuần.</p>
+                <p class="text-text-secondary dark:text-gray-400 text-sm mb-4 relative z-10">Đăng ký để nhận bài viết mới nhất và mã giảm giá hằng tuần.</p>
                 <form class="flex flex-col gap-3 relative z-10">
                     <input class="w-full border-gray-200 dark:border-gray-700 dark:bg-gray-800 rounded-full px-4 py-2 text-sm focus:border-primary focus:ring-primary" placeholder="Email của bạn..." type="email"/>
                     <button class="bg-primary hover:bg-primary-dark text-white py-2 rounded-full font-medium transition-colors text-sm shadow-sm" type="button">

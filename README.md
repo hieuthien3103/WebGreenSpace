@@ -41,8 +41,8 @@ cd WebGreenSpace
 ```
 
 2. Configure database:
-- Import database schema from `database/schema.sql`
-- Import sample data from `database/sample_data.sql`
+- Import database schema from `database/schema_revised.sql`
+- Import sample data from `database/sample_data_revised.sql`
 - Update `config/config.php` with your database credentials
 
 3. Start development server:
@@ -51,9 +51,19 @@ cd public
 php -S localhost:8000
 ```
 
+Or run the full stack with Docker:
+```bash
+docker compose up -d --build
+```
+
 4. Access the website:
 ```
 http://localhost:8000
+```
+
+phpMyAdmin (Docker):
+```
+http://localhost:8080
 ```
 
 ## Project Structure
@@ -87,6 +97,8 @@ WebGreenSpace/
 - [Summary](docs/REFACTORING_SUMMARY.md) - Quick overview of changes
 - [Products Guide](docs/PRODUCTS_GUIDE.md) - Product management guide
 - [Image Upload Guide](docs/IMAGE_UPLOAD_GUIDE.md) - Image handling guide
+- [Backend Checklist](docs/backend_checklist.md) - Current backend completion checklist
+- [Report Index](docs/report_index.md) - Entry point for ERD, sequence, system flow, and Docker docs
 
 ## Development
 

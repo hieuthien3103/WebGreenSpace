@@ -76,7 +76,7 @@ require_once __DIR__ . '/../config/database.php';
                         
                         echo '</tbody></table>';
                     } else {
-                        echo '<div class="error">⚠️ Không tìm thấy table nào. Vui lòng import file schema.sql</div>';
+                        echo '<div class="error">⚠️ Không tìm thấy table nào. Vui lòng import file schema_revised.sql</div>';
                     }
                     
                     // Test query - Get sample products
@@ -101,7 +101,7 @@ require_once __DIR__ . '/../config/database.php';
                         
                         echo '</tbody></table>';
                     } else {
-                        echo '<div class="error">⚠️ Chưa có sản phẩm nào. Vui lòng import file sample_data.sql</div>';
+                        echo '<div class="error">⚠️ Chưa có sản phẩm nào. Vui lòng import file sample_data_revised.sql</div>';
                     }
                     
                 } else {
@@ -118,8 +118,8 @@ require_once __DIR__ . '/../config/database.php';
                 echo '<strong>💡 Hướng dẫn khắc phục:</strong><br>';
                 echo '1. Kiểm tra XAMPP đã bật MySQL chưa<br>';
                 echo '2. Kiểm tra thông tin kết nối trong <span class="code">config/config.php</span><br>';
-                echo '3. Import file <span class="code">database/schema.sql</span> vào phpMyAdmin<br>';
-                echo '4. Import file <span class="code">database/sample_data.sql</span> để có dữ liệu mẫu';
+                echo '3. Import file <span class="code">database/schema_revised.sql</span> vào phpMyAdmin<br>';
+                echo '4. Import file <span class="code">database/sample_data_revised.sql</span> để có dữ liệu mẫu';
                 echo '</div>';
             }
             ?>

@@ -28,116 +28,72 @@ class ProductService {
     public function getProducts(array $filters = []): array {
         $category = $filters['category'] ?? '';
         $search = $filters['search'] ?? '';
-        $sort = $filters['sort'] ?? self::SORT_NEWEST;
+        $sort = $this->validateSort($filters['sort'] ?? self::SORT_NEWEST);
         $page = max(1, (int)($filters['page'] ?? 1));
-        $limit = (int)($filters['limit'] ?? 12);
+        $limit = max(1, (int)($filters['limit'] ?? 12));
         $offset = ($page - 1) * $limit;
         $minPrice = $filters['min_price'] ?? null;
         $maxPrice = $filters['max_price'] ?? null;
         
         $categoryData = null;
         $products = [];
+        $total = 0;
         
         try {
-            // Check if we have price filters or multiple filters
-            $hasAdvancedFilters = !empty($minPrice) || !empty($maxPrice) || !empty($search);
-            
-            if ($hasAdvancedFilters) {
-                // Use advanced filter method
-                $filterParams = [];
-                
-                if (!empty($search)) {
-                    $filterParams['search'] = $search;
-                }
-                
-                if (!empty($category)) {
-                    $categoryData = $this->categoryModel->getBySlug($category);
-                    if ($categoryData) {
-                        $filterParams['category_id'] = $categoryData['id'];
-                    }
-                }
-                
-                if (!empty($minPrice)) {
-                    $filterParams['min_price'] = $minPrice;
-                }
-                
-                if (!empty($maxPrice)) {
-                    $filterParams['max_price'] = $maxPrice;
-                }
-                
-                $products = $this->productModel->getFilteredProducts($filterParams, $limit, $offset);
-                
-            } else {
-                // Use simple methods for single filters
-                if (!empty($category)) {
-                    $categoryData = $this->categoryModel->getBySlug($category);
-                    if ($categoryData) {
-                        $products = $this->productModel->getByCategory($categoryData['id'], $limit, $offset);
-                    }
-                } else {
-                    $products = $this->productModel->getAll($limit, $offset);
+            $filterParams = [];
+
+            if (!empty($search)) {
+                $filterParams['search'] = $search;
+            }
+
+            if (!empty($category)) {
+                $categoryData = $this->categoryModel->getBySlug($category);
+                if ($categoryData) {
+                    $filterParams['category_id'] = $categoryData['id'];
                 }
             }
-            
-            // Apply sorting
-            $products = $this->applySorting($products, $sort, $limit);
-            
+
+            if ($minPrice !== null && is_numeric($minPrice)) {
+                $filterParams['min_price'] = (float)$minPrice;
+            }
+
+            if ($maxPrice !== null && is_numeric($maxPrice)) {
+                $filterParams['max_price'] = (float)$maxPrice;
+            }
+
+            $hasFilters = !empty($filterParams);
+            $total = $hasFilters
+                ? $this->productModel->getFilteredTotal($filterParams)
+                : $this->productModel->getTotal();
+
+            $totalPages = max(1, (int)ceil($total / $limit));
+            if ($total > 0 && $page > $totalPages) {
+                $page = $totalPages;
+                $offset = ($page - 1) * $limit;
+            }
+
+            if ($sort === self::SORT_BESTSELLER) {
+                $products = $this->productModel->getBestSellers($limit, $offset, $filterParams);
+            } else {
+                $products = $this->productModel->getFilteredProducts($filterParams, $limit, $offset, $sort);
+            }
         } catch (Exception $e) {
             error_log("ProductService Error: " . $e->getMessage());
             $products = [];
+            $total = 0;
         }
+
+        $totalPages = max(1, (int)ceil($total / $limit));
         
         return [
             'products' => $products,
             'category' => $categoryData,
-            'total' => count($products)
+            'total' => $total,
+            'page' => $page,
+            'limit' => $limit,
+            'total_pages' => $totalPages,
+            'sort' => $sort,
         ];
-    }
-    
-    /**
-     * Apply sorting to products
-     * 
-     * @param array $products Products to sort
-     * @param string $sort Sort type
-     * @param int $limit Limit for bestsellers
-     * @return array Sorted products
-     */
-    private function applySorting(array $products, string $sort, int $limit): array {
-        if (empty($products)) {
-            return [];
-        }
-        
-        switch ($sort) {
-            case self::SORT_PRICE_ASC:
-                usort($products, fn($a, $b) => $this->getEffectivePrice($a) <=> $this->getEffectivePrice($b));
-                break;
-                
-            case self::SORT_PRICE_DESC:
-                usort($products, fn($a, $b) => $this->getEffectivePrice($b) <=> $this->getEffectivePrice($a));
-                break;
-                
-            case self::SORT_BESTSELLER:
-                return $this->productModel->getBestSellers($limit);
-                
-            case self::SORT_NEWEST:
-            default:
-                // Already sorted by newest from query
-                break;
-        }
-        
-        return $products;
-    }
-    
-    /**
-     * Get effective price (sale price if available, otherwise regular price)
-     * 
-     * @param array $product Product data
-     * @return float Effective price
-     */
-    private function getEffectivePrice(array $product): float {
-        return !empty($product['sale_price']) && $product['sale_price'] > 0 
-            ? (float)$product['sale_price'] 
-            : (float)$product['price'];
     }
     
     /**

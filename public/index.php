@@ -1,9 +1,9 @@
 <?php
 /**
- * Front Page - Redirect to Home
+ * Front controller for clean URLs.
  */
 
-// Redirect to home page
-header('Location: home.php');
-exit();
-?>
+require_once __DIR__ . '/../config/config.php';
+
+$router = require __DIR__ . '/routes.php';
+$router->dispatch();

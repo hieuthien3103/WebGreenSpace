@@ -1,15 +1,15 @@
 <!-- Product Card Component -->
 <div class="group relative flex flex-col rounded-2xl bg-background-light p-4 transition-all hover:shadow-lg dark:bg-background-dark">
-    <div class="relative mb-4 aspect-[4/5] w-full overflow-hidden rounded-xl bg-gray-100">
+    <a href="product-detail.php?id=<?= $product['id'] ?>" class="relative mb-4 aspect-[4/5] w-full overflow-hidden rounded-xl bg-gray-100">
         <img src="<?= $product['image_url'] ?? image_url('products/default.jpg') ?>" 
              alt="<?= clean($product['name']) ?>"
              class="h-full w-full object-cover transition-transform duration-500 group-hover:scale-110">
         
         <!-- Hover Overlay with Actions -->
         <div class="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-3">
-            <button class="size-10 rounded-full bg-white text-text-main flex items-center justify-center hover:bg-primary hover:text-white transition-colors shadow-lg transform translate-y-4 group-hover:translate-y-0 duration-300" title="Xem nhanh">
+            <a href="product-detail.php?id=<?= $product['id'] ?>" class="size-10 rounded-full bg-white text-text-main flex items-center justify-center hover:bg-primary hover:text-white transition-colors shadow-lg transform translate-y-4 group-hover:translate-y-0 duration-300" title="Xem nhanh">
                 <span class="material-symbols-outlined text-[20px]">visibility</span>
-            </button>
+            </a>
             <button class="size-10 rounded-full bg-white text-text-main flex items-center justify-center hover:bg-primary hover:text-white transition-colors shadow-lg transform translate-y-4 group-hover:translate-y-0 duration-300 delay-75" title="Yêu thích">
                 <span class="material-symbols-outlined text-[20px]">favorite</span>
             </button>
@@ -21,10 +21,12 @@
         ?>
             <span class="absolute left-3 top-3 rounded-lg bg-red-500 px-2 py-1 text-xs font-bold text-white">-<?= $discount ?>%</span>
         <?php endif; ?>
-    </div>
+    </a>
     
     <div class="flex flex-1 flex-col">
-        <h3 class="text-lg font-bold text-text-main dark:text-white"><?= clean($product['name']) ?></h3>
+        <a href="product-detail.php?id=<?= $product['id'] ?>">
+            <h3 class="text-lg font-bold text-text-main dark:text-white hover:text-primary transition-colors"><?= clean($product['name']) ?></h3>
+        </a>
         <p class="mb-3 text-sm text-text-secondary"><?= clean($product['category_name'] ?? '') ?></p>
         
         <div class="mt-auto flex items-center justify-between">

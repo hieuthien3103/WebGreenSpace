@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
+require_admin_permission('orders.manage', 'orders.php');
 
 function admin_orders_query(array $params): string {
     $filtered = [];

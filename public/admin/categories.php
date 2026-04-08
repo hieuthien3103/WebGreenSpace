@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
+require_admin_permission('categories.manage', 'categories.php');
 
 function admin_category_defaults(): array {
     return [

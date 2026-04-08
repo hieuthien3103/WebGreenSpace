@@ -16,7 +16,7 @@ class User {
      * Find active user by ID.
      */
     public function findById(int $id): ?array {
-        $query = "SELECT id, username, email, password, full_name, phone, role, status, created_at, updated_at
+        $query = "SELECT id, username, email, password, full_name, phone, role, admin_permissions, status, created_at, updated_at
                   FROM {$this->table}
                   WHERE id = :id
                   LIMIT 1";
@@ -25,15 +25,14 @@ class User {
         $stmt->bindValue(':id', $id, PDO::PARAM_INT);
         $stmt->execute();
 
-        $user = $stmt->fetch();
-        return $user ?: null;
+        return $this->hydrateUser($stmt->fetch() ?: null);
     }
 
     /**
      * Find user by email.
      */
     public function findByEmail(string $email): ?array {
-        $query = "SELECT id, username, email, password, full_name, phone, role, status, created_at, updated_at
+        $query = "SELECT id, username, email, password, full_name, phone, role, admin_permissions, status, created_at, updated_at
                   FROM {$this->table}
                   WHERE email = :email
                   LIMIT 1";
@@ -42,15 +41,14 @@ class User {
         $stmt->bindValue(':email', $email, PDO::PARAM_STR);
         $stmt->execute();
 
-        $user = $stmt->fetch();
-        return $user ?: null;
+        return $this->hydrateUser($stmt->fetch() ?: null);
     }
 
     /**
      * Find user by username.
      */
     public function findByUsername(string $username): ?array {
-        $query = "SELECT id, username, email, password, full_name, phone, role, status, created_at, updated_at
+        $query = "SELECT id, username, email, password, full_name, phone, role, admin_permissions, status, created_at, updated_at
                   FROM {$this->table}
                   WHERE username = :username
                   LIMIT 1";
@@ -59,15 +57,14 @@ class User {
         $stmt->bindValue(':username', $username, PDO::PARAM_STR);
         $stmt->execute();
 
-        $user = $stmt->fetch();
-        return $user ?: null;
+        return $this->hydrateUser($stmt->fetch() ?: null);
     }
 
     /**
      * Find user by email or username.
      */
     public function findByLogin(string $identifier): ?array {
-        $query = "SELECT id, username, email, password, full_name, phone, role, status, created_at, updated_at
+        $query = "SELECT id, username, email, password, full_name, phone, role, admin_permissions, status, created_at, updated_at
                   FROM {$this->table}
                   WHERE email = :email_identifier OR username = :username_identifier
                   LIMIT 1";
@@ -77,24 +74,25 @@ class User {
         $stmt->bindValue(':username_identifier', $identifier, PDO::PARAM_STR);
         $stmt->execute();
 
-        $user = $stmt->fetch();
-        return $user ?: null;
+        return $this->hydrateUser($stmt->fetch() ?: null);
     }
 
     /**
      * Create a new user.
      */
     public function create(array $data): int {
-        $query = "INSERT INTO {$this->table} (username, email, password, full_name, phone, role, status)
-                  VALUES (:username, :email, :password, :full_name, :phone, :role, :status)";
+        $query = "INSERT INTO {$this->table} (username, email, password, full_name, phone, role, admin_permissions, status)
+                  VALUES (:username, :email, :password, :full_name, :phone, :role, :admin_permissions, :status)";
 
         $stmt = $this->conn->prepare($query);
+        $encodedPermissions = $this->encodeAdminPermissions($data['admin_permissions'] ?? [], (string)($data['role'] ?? 'user'));
         $stmt->bindValue(':username', $data['username'], PDO::PARAM_STR);
         $stmt->bindValue(':email', $data['email'], PDO::PARAM_STR);
         $stmt->bindValue(':password', $data['password'], PDO::PARAM_STR);
         $stmt->bindValue(':full_name', $data['full_name'], PDO::PARAM_STR);
         $stmt->bindValue(':phone', $data['phone'] ?: null, $data['phone'] ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->bindValue(':role', $data['role'] ?? 'user', PDO::PARAM_STR);
+        $stmt->bindValue(':admin_permissions', $encodedPermissions, $encodedPermissions !== null ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->bindValue(':status', $data['status'] ?? 'active', PDO::PARAM_STR);
         $stmt->execute();
 
@@ -138,6 +136,7 @@ class User {
                          u.full_name,
                          u.phone,
                          u.role,
+                         u.admin_permissions,
                          u.status,
                          u.created_at,
                          u.updated_at,
@@ -146,7 +145,7 @@ class User {
                   FROM {$this->table} u
                   LEFT JOIN orders o ON o.user_id = u.id
                   {$whereSql}
-                  GROUP BY u.id, u.username, u.email, u.full_name, u.phone, u.role, u.status, u.created_at, u.updated_at
+                  GROUP BY u.id, u.username, u.email, u.full_name, u.phone, u.role, u.admin_permissions, u.status, u.created_at, u.updated_at
                   ORDER BY u.updated_at DESC, u.created_at DESC
                   LIMIT :limit OFFSET :offset";
 
@@ -156,7 +155,8 @@ class User {
         $stmt->bindValue(':offset', max(0, $offset), PDO::PARAM_INT);
         $stmt->execute();
 
-        return $stmt->fetchAll() ?: [];
+        $users = $stmt->fetchAll() ?: [];
+        return array_map(fn(array $user): array => $this->hydrateUser($user), $users);
     }
 
     /**
@@ -257,15 +257,18 @@ class User {
                       full_name = :full_name,
                       phone = :phone,
                       role = :role,
+                      admin_permissions = :admin_permissions,
                       status = :status
                   WHERE id = :id";
 
         $stmt = $this->conn->prepare($query);
+        $encodedPermissions = $this->encodeAdminPermissions($data['admin_permissions'] ?? [], (string)$data['role']);
         $stmt->bindValue(':username', $data['username'], PDO::PARAM_STR);
         $stmt->bindValue(':email', $data['email'], PDO::PARAM_STR);
         $stmt->bindValue(':full_name', $data['full_name'], PDO::PARAM_STR);
         $stmt->bindValue(':phone', $data['phone'] ?: null, $data['phone'] ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->bindValue(':role', $data['role'], PDO::PARAM_STR);
+        $stmt->bindValue(':admin_permissions', $encodedPermissions, $encodedPermissions !== null ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->bindValue(':status', $data['status'], PDO::PARAM_STR);
         $stmt->bindValue(':id', $userId, PDO::PARAM_INT);
 
@@ -323,5 +326,37 @@ class User {
 
             $stmt->bindValue($key, $value, PDO::PARAM_STR);
         }
+    }
+
+    /**
+     * Hydrate user data with normalized admin permission metadata.
+     */
+    private function hydrateUser(?array $user): ?array {
+        if ($user === null) {
+            return null;
+        }
+
+        $rawPermissions = $user['admin_permissions'] ?? null;
+        $user['admin_permissions'] = normalize_admin_permissions($rawPermissions);
+        $user['has_full_admin_access'] = ($user['role'] ?? 'user') === 'admin'
+            && ($rawPermissions === null || $rawPermissions === '');
+
+        return $user;
+    }
+
+    /**
+     * Encode admin permissions for storage.
+     */
+    private function encodeAdminPermissions(array $permissions, string $role): ?string {
+        if ($role !== 'admin') {
+            return null;
+        }
+
+        $permissions = normalize_admin_permissions($permissions);
+        if ($permissions === []) {
+            return null;
+        }
+
+        return json_encode(array_values($permissions), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: null;
     }
 }

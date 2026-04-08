@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
+require_admin_permission('uploads.manage', 'check_images.php');
 require_once __DIR__ . '/../../app/models/Product.php';
 
 $productModel = new Product();

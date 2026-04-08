@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
+require_admin_permission('uploads.manage', 'admin_upload_images.php');
 
 render_admin_header('Quản lý ảnh sản phẩm');
 ?>

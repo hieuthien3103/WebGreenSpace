@@ -3,7 +3,7 @@ require_once __DIR__ . '/../../config/config.php';
 require_once __DIR__ . '/../../config/database.php';
 
 if (is_logged_in() && is_admin()) {
-    redirect('dashboard.php');
+    redirect(admin_path('dashboard.php'));
 }
 
 $pageTitle = 'Đăng nhập admin - GreenSpace';
@@ -28,7 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if (!empty($result['success'])) {
             set_flash('success', 'Đăng nhập admin thành công.');
-            redirect($redirectTarget);
+            redirect(admin_path($redirectTarget));
         }
 
         $errors = $result['errors'] ?? ['general' => 'Không thể đăng nhập admin lúc này.'];

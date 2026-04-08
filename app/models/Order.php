@@ -903,6 +903,6 @@ class Order {
      * Shared guidance when the database schema is missing pending_review.
      */
     private function missingPendingReviewSchemaMessage(): string {
-        return 'CSDL chưa hỗ trợ trạng thái pending_review. Hãy chạy file database/alter_payment_status_pending_review.sql rồi thử lại.';
+        return 'CSDL chưa hỗ trợ trạng thái pending_review. Hãy cập nhật schema để các cột orders.payment_status và payments.status hỗ trợ giá trị này rồi thử lại.';
     }
 }

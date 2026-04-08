@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
+require_admin_permission('uploads.manage', 'upload_product_image.php');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     redirect('admin_upload_images.php');

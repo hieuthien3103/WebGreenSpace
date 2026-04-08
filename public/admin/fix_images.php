@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
+require_admin_permission('uploads.manage', 'fix_images.php');
 
 $db = new Database();
 $conn = $db->getConnection();

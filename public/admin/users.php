@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
+require_admin_permission('users.manage', 'users.php');
 
 function admin_user_defaults(): array {
     return [
@@ -8,6 +9,7 @@ function admin_user_defaults(): array {
         'full_name' => '',
         'phone' => '',
         'role' => 'user',
+        'admin_permissions' => [],
         'status' => 'active',
     ];
 }
@@ -19,6 +21,7 @@ function admin_collect_user_form_data(array $input): array {
         'full_name' => trim((string)($input['full_name'] ?? '')),
         'phone' => trim((string)($input['phone'] ?? '')),
         'role' => trim((string)($input['role'] ?? 'user')),
+        'admin_permissions' => normalize_admin_permissions($input['admin_permissions'] ?? []),
         'status' => trim((string)($input['status'] ?? 'active')),
     ];
 }
@@ -64,7 +67,34 @@ function admin_user_status_meta(string $status): array {
     };
 }
 
+function admin_user_permission_summary(array $user, array $permissionOptions): ?string {
+    if (($user['role'] ?? 'user') !== 'admin') {
+        return null;
+    }
+
+    if (!empty($user['has_full_admin_access'])) {
+        return 'Toàn quyền quản trị';
+    }
+
+    $labels = [];
+    foreach (normalize_admin_permissions($user['admin_permissions'] ?? []) as $permission) {
+        $labels[] = $permissionOptions[$permission]['label'] ?? $permission;
+    }
+
+    if ($labels === []) {
+        return 'Chưa cấp quyền chi tiết';
+    }
+
+    $summary = implode(', ', array_slice($labels, 0, 2));
+    if (count($labels) > 2) {
+        $summary .= ' +' . (count($labels) - 2) . ' quyền';
+    }
+
+    return $summary;
+}
+
 $userModel = new User();
+$permissionOptions = admin_permission_catalog();
 
 $roleOptions = [
     'all' => 'Tất cả vai trò',
@@ -119,7 +149,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($formData['full_name'] === '') {
             $errors['full_name'] = 'Họ tên không được để trống.';
-        } elseif (mb_strlen($formData['full_name']) < 2) {
+        } elseif (string_length($formData['full_name']) < 2) {
             $errors['full_name'] = 'Họ tên cần ít nhất 2 ký tự.';
         }
 
@@ -147,6 +177,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $errors['role'] = 'Vai trò không hợp lệ.';
         }
 
+        if ($formData['role'] !== 'admin') {
+            $formData['admin_permissions'] = [];
+        }
+
+        foreach ($formData['admin_permissions'] as $permission) {
+            if (!array_key_exists($permission, $permissionOptions)) {
+                $errors['admin_permissions'] = 'Danh sách quyền admin phụ không hợp lệ.';
+                break;
+            }
+        }
+
         if (!in_array($formData['status'], ['active', 'inactive'], true)) {
             $errors['status'] = 'Trạng thái không hợp lệ.';
         }
@@ -158,6 +199,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($formData['status'] !== (string)$editingUser['status']) {
                 $errors['status'] = 'Bạn không thể tự khóa tài khoản admin đang đăng nhập.';
+            }
+
+            if ($formData['admin_permissions'] !== normalize_admin_permissions($editingUser['admin_permissions'] ?? [])) {
+                $errors['admin_permissions'] = 'Bạn không thể tự thay đổi phạm vi quyền admin của chính mình tại trang này.';
             }
         }
 
@@ -176,6 +221,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'full_name' => $formData['full_name'],
                 'phone' => $formData['phone'],
                 'role' => $formData['role'],
+                'admin_permissions' => $formData['admin_permissions'],
                 'status' => $formData['status'],
             ]);
 
@@ -217,6 +263,7 @@ if ($editId > 0 && !$editingUser) {
         'full_name' => (string)($editingUser['full_name'] ?? ''),
         'phone' => (string)($editingUser['phone'] ?? ''),
         'role' => (string)($editingUser['role'] ?? 'user'),
+        'admin_permissions' => normalize_admin_permissions($editingUser['admin_permissions'] ?? []),
         'status' => (string)($editingUser['status'] ?? 'active'),
     ];
 }
@@ -330,6 +377,7 @@ render_admin_header('Quản lý user');
                                     <?php
                                     $roleMeta = admin_user_role_meta((string)$user['role']);
                                     $statusMeta = admin_user_status_meta((string)$user['status']);
+                                    $permissionSummary = admin_user_permission_summary($user, $permissionOptions);
                                     $editQuery = admin_users_query([
                                         'edit' => $user['id'],
                                         'q' => $search,
@@ -357,6 +405,9 @@ render_admin_header('Quản lý user');
                                             <span class="rounded-full px-3 py-1 text-xs font-semibold <?= clean($roleMeta['class']) ?>">
                                                 <?= clean($roleMeta['label']) ?>
                                             </span>
+                                            <?php if ($permissionSummary !== null): ?>
+                                                <p class="mt-2 text-xs text-[#6e8d7b]"><?= clean($permissionSummary) ?></p>
+                                            <?php endif; ?>
                                         </td>
                                         <td class="py-4 pr-4 font-semibold text-[#102118]">
                                             <?= clean((string)$user['order_count']) ?>
@@ -420,7 +471,7 @@ render_admin_header('Quản lý user');
                         </div>
                     <?php elseif ($isEditingCurrentUser): ?>
                         <div class="mt-6 rounded-2xl border border-[#d9e9de] bg-[#f8fbf9] px-4 py-3 text-sm text-[#4c6a5b]">
-                            Bạn đang chỉnh sửa tài khoản admin hiện tại. Hệ thống cho phép cập nhật thông tin cá nhân nhưng không cho tự đổi vai trò hoặc tự khóa tài khoản.
+                            Bạn đang chỉnh sửa tài khoản admin hiện tại. Hệ thống cho phép cập nhật thông tin cá nhân nhưng không cho tự đổi vai trò, tự khóa tài khoản hoặc tự thu hẹp quyền quản trị của chính mình.
                         </div>
                     <?php endif; ?>
 
@@ -490,10 +541,48 @@ render_admin_header('Quản lý user');
                             </div>
                         </div>
 
+                        <div id="admin_permissions_panel" class="<?= $formData['role'] === 'admin' ? '' : 'hidden ' ?>rounded-[1.5rem] border border-[#d9e9de] bg-[#f8fbf9] p-5">
+                            <div class="flex flex-col gap-2">
+                                <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Admin phụ</p>
+                                <h3 class="text-lg font-extrabold text-[#102118]">Quyền chi tiết theo module</h3>
+                                <p class="text-sm text-[#5f7b6c]">
+                                    Để trống nghĩa là tài khoản admin có toàn quyền như hiện tại. Chọn vài quyền bên dưới để biến tài khoản này thành admin phụ theo từng nhóm chức năng.
+                                </p>
+                            </div>
+
+                            <?php if ($isEditingCurrentUser): ?>
+                                <div class="mt-4 rounded-2xl border border-[#d9e9de] bg-white px-4 py-3 text-sm text-[#4c6a5b]">
+                                    Bạn không thể tự thay đổi phạm vi quyền admin của mình tại màn này.
+                                </div>
+                                <?php foreach ($formData['admin_permissions'] as $permission): ?>
+                                    <input type="hidden" name="admin_permissions[]" value="<?= clean($permission) ?>">
+                                <?php endforeach; ?>
+                            <?php else: ?>
+                                <div class="mt-4 grid gap-3">
+                                    <?php foreach ($permissionOptions as $permission => $meta): ?>
+                                        <label class="flex items-start gap-3 rounded-2xl border border-[#d9e9de] bg-white px-4 py-4">
+                                            <input type="checkbox" name="admin_permissions[]" value="<?= clean($permission) ?>" <?= in_array($permission, $formData['admin_permissions'], true) ? 'checked' : '' ?> class="mt-1 rounded border-[#cfe0d5] text-[#2e9b63] focus:ring-[#2e9b63]">
+                                            <span>
+                                                <span class="block text-sm font-semibold text-[#102118]"><?= clean($meta['label']) ?></span>
+                                                <span class="mt-1 block text-sm text-[#5f7b6c]"><?= clean($meta['description']) ?></span>
+                                            </span>
+                                        </label>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+
+                            <?php if (isset($errors['admin_permissions'])): ?>
+                                <p class="mt-3 text-sm text-red-600"><?= clean($errors['admin_permissions']) ?></p>
+                            <?php endif; ?>
+                        </div>
+
                         <div class="rounded-[1.25rem] border border-[#edf4ef] bg-[#f8fbf9] px-4 py-4 text-sm text-[#4c6a5b]">
                             <p class="font-semibold text-[#102118]">Thông tin thêm</p>
                             <p class="mt-2">Tạo lúc: <?= format_date((string)$editingUser['created_at'], 'd/m/Y H:i') ?></p>
                             <p class="mt-1">Cập nhật gần nhất: <?= format_date((string)$editingUser['updated_at'], 'd/m/Y H:i') ?></p>
+                            <?php if (($editingUser['role'] ?? 'user') === 'admin'): ?>
+                                <p class="mt-1">Phạm vi admin: <?= clean(admin_user_permission_summary($editingUser, $permissionOptions) ?? 'Toàn quyền quản trị') ?></p>
+                            <?php endif; ?>
                         </div>
 
                         <div class="flex flex-wrap items-center gap-3 pt-2">
@@ -530,5 +619,21 @@ render_admin_header('Quản lý user');
         </div>
     </section>
 </div>
+
+<script>
+const adminRoleSelect = document.getElementById('role_form');
+const adminPermissionsPanel = document.getElementById('admin_permissions_panel');
+
+const syncAdminPermissionsPanel = () => {
+    if (!adminRoleSelect || !adminPermissionsPanel) {
+        return;
+    }
+
+    adminPermissionsPanel.classList.toggle('hidden', adminRoleSelect.value !== 'admin');
+};
+
+adminRoleSelect?.addEventListener('change', syncAdminPermissionsPanel);
+syncAdminPermissionsPanel();
+</script>
 
 <?php render_admin_footer(); ?>

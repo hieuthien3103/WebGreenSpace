@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
+require_admin_permission('products.manage', 'products.php');
 
 function admin_product_defaults(): array {
     return [

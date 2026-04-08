@@ -41,14 +41,13 @@ cd WebGreenSpace
 ```
 
 2. Configure database:
-- Import database schema from `database/schema_revised.sql`
-- Import sample data from `database/sample_data_revised.sql`
+- Import `database/full_setup_revised.sql`
 - Update `config/config.php` with your database credentials
 
 3. Start development server:
 ```bash
 cd public
-php -S localhost:8000
+php -S 0.0.0.0:8000
 ```
 
 Or run the full stack with Docker:
@@ -60,6 +59,13 @@ docker compose up -d --build
 ```
 http://localhost:8000
 ```
+
+Admin login:
+```
+http://localhost:8000/admin/login.php
+```
+
+If you access from another machine in the same network, replace `localhost` with your server IP.
 
 phpMyAdmin (Docker):
 ```

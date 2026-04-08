@@ -68,6 +68,24 @@ function clean(string|array $data): string|array {
 }
 
 /**
+ * Get string length with UTF-8 support even when mbstring is unavailable.
+ *
+ * @param string $value
+ * @return int
+ */
+function string_length(string $value): int {
+    if (function_exists('mb_strlen')) {
+        return mb_strlen($value, 'UTF-8');
+    }
+
+    if (preg_match_all('/./us', $value, $matches) === false) {
+        return strlen($value);
+    }
+
+    return count($matches[0]);
+}
+
+/**
  * Check if user is logged in
  * 
  * @return bool True if logged in
@@ -109,7 +127,7 @@ function require_login(string $redirectTarget = 'home.php'): void {
 function require_admin(string $redirectTarget = 'admin/dashboard.php'): void {
     if (!is_logged_in()) {
         set_flash('error', 'Vui lòng đăng nhập bằng tài khoản admin.');
-        redirect('admin/login.php?redirect=' . urlencode($redirectTarget));
+        redirect(admin_path('login.php?redirect=' . urlencode($redirectTarget)));
     }
 
     if (is_admin()) {
@@ -118,6 +136,154 @@ function require_admin(string $redirectTarget = 'admin/dashboard.php'): void {
 
     set_flash('error', 'Bạn không có quyền truy cập khu vực admin.');
     redirect('home.php');
+}
+
+/**
+ * Lightweight admin permission catalog for sub-admin accounts.
+ *
+ * @return array<string, array{label: string, description: string}>
+ */
+function admin_permission_catalog(): array {
+    return [
+        'orders.manage' => [
+            'label' => 'Quản lý đơn hàng',
+            'description' => 'Xem đơn, cập nhật trạng thái và duyệt thanh toán mô phỏng.',
+        ],
+        'products.manage' => [
+            'label' => 'Quản lý sản phẩm',
+            'description' => 'Tạo, sửa, ẩn/hiện và cập nhật thông tin sản phẩm.',
+        ],
+        'categories.manage' => [
+            'label' => 'Quản lý danh mục',
+            'description' => 'Tạo và chỉnh sửa cây danh mục sản phẩm.',
+        ],
+        'users.manage' => [
+            'label' => 'Quản lý tài khoản',
+            'description' => 'Phân quyền, khóa/mở và cập nhật tài khoản người dùng.',
+        ],
+        'uploads.manage' => [
+            'label' => 'Quản lý ảnh sản phẩm',
+            'description' => 'Upload ảnh, cập nhật URL ảnh và chạy các tiện ích ảnh.',
+        ],
+    ];
+}
+
+/**
+ * Normalize stored admin permissions to a clean list of known keys.
+ *
+ * @param mixed $permissions
+ * @return string[]
+ */
+function normalize_admin_permissions(mixed $permissions): array {
+    if (is_string($permissions)) {
+        $decoded = json_decode($permissions, true);
+        $permissions = is_array($decoded) ? $decoded : [];
+    }
+
+    if (!is_array($permissions)) {
+        return [];
+    }
+
+    $allowed = array_keys(admin_permission_catalog());
+    $normalized = [];
+
+    foreach ($permissions as $permission) {
+        $permission = trim((string)$permission);
+        if ($permission === '' || !in_array($permission, $allowed, true) || in_array($permission, $normalized, true)) {
+            continue;
+        }
+
+        $normalized[] = $permission;
+    }
+
+    return $normalized;
+}
+
+/**
+ * Check whether the current admin has unrestricted access.
+ */
+function admin_has_full_access(?array $user = null): bool {
+    if (!is_admin()) {
+        return false;
+    }
+
+    $user ??= get_user();
+    if (!$user) {
+        return false;
+    }
+
+    if (array_key_exists('has_full_admin_access', $user)) {
+        return (bool)$user['has_full_admin_access'];
+    }
+
+    return empty($user['admin_permissions']);
+}
+
+/**
+ * Get normalized admin permissions for the current session.
+ *
+ * @return string[]
+ */
+function get_admin_permissions(): array {
+    $user = get_user();
+    return normalize_admin_permissions($user['admin_permissions'] ?? []);
+}
+
+/**
+ * Check a specific lightweight admin permission.
+ */
+function admin_has_permission(string $permission): bool {
+    if (!is_admin()) {
+        return false;
+    }
+
+    if (!array_key_exists($permission, admin_permission_catalog())) {
+        return false;
+    }
+
+    if (admin_has_full_access()) {
+        return true;
+    }
+
+    return in_array($permission, get_admin_permissions(), true);
+}
+
+/**
+ * Ensure the current admin can access a specific admin capability.
+ */
+function require_admin_permission(string $permission, string $redirectTarget = 'dashboard.php'): void {
+    require_admin($redirectTarget);
+
+    if (admin_has_permission($permission)) {
+        return;
+    }
+
+    set_flash('error', 'Bạn không có quyền truy cập chức năng quản trị này.');
+    redirect(admin_path('dashboard.php'));
+}
+
+/**
+ * Build a robust path inside the admin area.
+ *
+ * @param string $target
+ * @return string
+ */
+function admin_path(string $target = 'dashboard.php'): string {
+    $target = ltrim(trim($target), '/');
+    if (str_starts_with($target, 'admin/')) {
+        $target = substr($target, 6);
+    }
+
+    $requestPath = (string)parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH);
+    if ($requestPath !== '') {
+        $adminPosition = strpos($requestPath, '/admin');
+        if ($adminPosition !== false) {
+            $prefix = rtrim(substr($requestPath, 0, $adminPosition), '/');
+            return ($prefix !== '' ? $prefix : '') . '/admin/' . $target;
+        }
+    }
+
+    return 'admin/' . $target;
 }
 
 /**

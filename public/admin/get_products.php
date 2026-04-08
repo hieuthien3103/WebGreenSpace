@@ -1,5 +1,6 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
+require_admin_permission('uploads.manage', 'get_products.php');
 
 header('Content-Type: application/json; charset=utf-8');
 

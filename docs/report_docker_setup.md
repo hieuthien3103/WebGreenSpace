@@ -63,13 +63,8 @@ Lan dau khoi dong:
 
 - MySQL se tao DB `webgreenspace`
 - SQL trong `database/` duoc mount vao thu muc init cua container DB
-- Co the import schema/sample data qua phpMyAdmin hoac `mysql` CLI neu can
-
-Neu can them migration cho payment:
-
-```bash
-Get-Content database/alter_payment_status_pending_review.sql | docker compose exec -T db mysql -uroot -proot webgreenspace
-```
+- Co the import toan bo schema va sample data bang `database/full_setup_revised.sql` qua phpMyAdmin hoac `mysql` CLI neu can
+- Trang thai `pending_review` da nam san trong `database/full_setup_revised.sql`
 
 ## 6. Kiem tra ket noi va schema
 

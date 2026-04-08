@@ -136,7 +136,7 @@ class AuthService {
 
         if ($input['full_name'] === '') {
             $errors['full_name'] = 'Vui lòng nhập họ tên.';
-        } elseif (mb_strlen($input['full_name']) < 2) {
+        } elseif (string_length($input['full_name']) < 2) {
             $errors['full_name'] = 'Họ tên cần ít nhất 2 ký tự.';
         }
 

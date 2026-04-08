@@ -1,6 +1,6 @@
 # ERD
 
-Tai lieu nay mo ta cau truc CSDL hien tai cua `webgreenspace` theo `database/schema_revised.sql` va migration `database/alter_payment_status_pending_review.sql`.
+Tai lieu nay mo ta cau truc CSDL hien tai cua `webgreenspace` theo `database/full_setup_revised.sql`.
 
 ## Nhom bang chinh
 

@@ -15,13 +15,28 @@ if (!is_admin()) {
 
 function admin_nav_items(): array {
     return [
-        'dashboard.php' => 'Dashboard',
-        'orders.php' => 'Quản lý đơn hàng',
-        'products.php' => 'Quản lý sản phẩm',
-        'categories.php' => 'Quản lý danh mục',
-        'users.php' => 'Quản lý user',
-        'admin_upload_images.php' => 'Ảnh sản phẩm',
+        'dashboard.php' => ['label' => 'Dashboard'],
+        'orders.php' => ['label' => 'Quản lý đơn hàng', 'permission' => 'orders.manage'],
+        'products.php' => ['label' => 'Quản lý sản phẩm', 'permission' => 'products.manage'],
+        'categories.php' => ['label' => 'Quản lý danh mục', 'permission' => 'categories.manage'],
+        'users.php' => ['label' => 'Quản lý user', 'permission' => 'users.manage'],
+        'admin_upload_images.php' => ['label' => 'Ảnh sản phẩm', 'permission' => 'uploads.manage'],
     ];
+}
+
+function visible_admin_nav_items(): array {
+    $items = [];
+
+    foreach (admin_nav_items() as $file => $meta) {
+        $permission = $meta['permission'] ?? null;
+        if ($permission !== null && !admin_has_permission($permission)) {
+            continue;
+        }
+
+        $items[$file] = $meta['label'];
+    }
+
+    return $items;
 }
 
 function render_admin_header(string $title): void {
@@ -73,7 +88,7 @@ function render_admin_header(string $title): void {
                     </div>
 
                     <nav class="mt-4 flex flex-wrap gap-2">
-                        <?php foreach (admin_nav_items() as $file => $label): ?>
+                        <?php foreach (visible_admin_nav_items() as $file => $label): ?>
                             <a
                                 href="<?= clean($file) ?>"
                                 class="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition-colors <?= $currentPage === $file ? 'bg-[#102118] text-white' : 'border border-[#d9e9de] text-[#102118] hover:border-[#2e9b63] hover:text-[#2e9b63]' ?>"

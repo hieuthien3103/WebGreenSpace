@@ -356,10 +356,10 @@ CREATE TABLE inventory_logs (
 -- ========================================
 -- Sample data
 -- ========================================
-INSERT INTO users (username, email, password, full_name, phone, role, status) VALUES
-('admin', 'admin@webgreenspace.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Administrator', '0900000000', 'admin', 'active'),
-('user01', 'user01@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Nguyễn Văn A', '0901234567', 'user', 'active'),
-('user02', 'user02@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Trần Thị B', '0912345678', 'user', 'active');
+INSERT INTO users (username, email, password, full_name, phone, role, admin_permissions, status) VALUES
+('admin', 'admin@webgreenspace.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Administrator', '0900000000', 'admin', '["admin.full_access"]', 'active'),
+('user01', 'user01@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Nguyễn Văn A', '0901234567', 'user', NULL, 'active'),
+('user02', 'user02@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Trần Thị B', '0912345678', 'user', NULL, 'active');
 
 INSERT INTO addresses (user_id, receiver_name, phone, province, district, ward, address_line, is_default) VALUES
 (2, 'Nguyễn Văn A', '0901234567', 'TP.HCM', 'Thủ Đức', 'Linh Trung', '123 Đường ABC', 1),

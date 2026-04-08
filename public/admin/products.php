@@ -81,6 +81,45 @@ function admin_products_query(array $params): string {
     return $query !== '' ? '?' . $query : '';
 }
 
+function admin_product_uploaded_file_present(array $file): bool {
+    return isset($file['error']) && (int)$file['error'] !== UPLOAD_ERR_NO_FILE;
+}
+
+function admin_store_uploaded_product_image(array $file): array {
+    $validation = validate_uploaded_image($file);
+    if (empty($validation['valid'])) {
+        return [
+            'success' => false,
+            'error' => (string)($validation['error'] ?? 'Ảnh tải lên không hợp lệ.'),
+        ];
+    }
+
+    $uploadDir = __DIR__ . '/../../uploads/products/';
+    if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
+        return [
+            'success' => false,
+            'error' => 'Không thể tạo thư mục lưu ảnh.',
+        ];
+    }
+
+    $extension = (string)($validation['extension'] ?? 'jpg');
+    $newFileName = 'product_' . date('YmdHis') . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+    $uploadPath = $uploadDir . $newFileName;
+    $imagePath = 'products/' . $newFileName;
+
+    if (!move_uploaded_file((string)$file['tmp_name'], $uploadPath)) {
+        return [
+            'success' => false,
+            'error' => 'Không thể lưu file ảnh đã tải lên.',
+        ];
+    }
+
+    return [
+        'success' => true,
+        'path' => $imagePath,
+    ];
+}
+
 $productModel = new Product();
 $categoryModel = new Category();
 
@@ -119,6 +158,7 @@ $errors = [];
 $formMode = 'create';
 $formData = admin_product_defaults();
 $editingProduct = null;
+$imageUploadRequested = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
@@ -159,6 +199,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $formData = admin_collect_product_form_data($_POST);
     $formMode = $action === 'update' ? 'edit' : 'create';
     $editId = max(0, (int)($_POST['product_id'] ?? 0));
+    $imageUploadRequested = admin_product_uploaded_file_present($_FILES['product_image'] ?? []);
 
     if ($action === 'update') {
         $editingProduct = $productModel->getAdminById($editId);
@@ -217,6 +258,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $errors['slug'] = 'Không thể tạo đường dẫn từ tên sản phẩm. Vui lòng nhập slug thủ công.';
     }
 
+    $uploadedImagePath = null;
+    if ($imageUploadRequested && empty($errors)) {
+        $uploadResult = admin_store_uploaded_product_image($_FILES['product_image']);
+        if (empty($uploadResult['success'])) {
+            $errors['product_image'] = (string)($uploadResult['error'] ?? 'Không thể tải ảnh lên lúc này.');
+        } else {
+            $uploadedImagePath = (string)$uploadResult['path'];
+            $formData['image'] = $uploadedImagePath;
+        }
+    }
+
     if (empty($errors)) {
         $payload = [
             'category_id' => (int)$formData['category_id'],
@@ -235,20 +287,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'status' => $formData['status'],
         ];
 
-        if ($action === 'update') {
-            $productModel->updateAdminProduct($editId, $payload);
-            set_flash('success', 'Đã cập nhật thông tin sản phẩm.');
-            redirect('products.php' . admin_products_query([
-                'edit' => $editId,
-                'q' => $search,
-                'status' => $statusFilter,
-                'page' => $page,
-            ]));
-        }
+        try {
+            if ($action === 'update') {
+                $productModel->updateAdminProduct($editId, $payload);
+                set_flash('success', $uploadedImagePath !== null ? 'Đã cập nhật sản phẩm và ảnh đại diện.' : 'Đã cập nhật thông tin sản phẩm.');
+                redirect('products.php' . admin_products_query([
+                    'edit' => $editId,
+                    'q' => $search,
+                    'status' => $statusFilter,
+                    'page' => $page,
+                ]));
+            }
 
-        $newId = $productModel->createAdminProduct($payload);
-        set_flash('success', 'Đã thêm sản phẩm mới vào hệ thống.');
-        redirect('products.php?edit=' . $newId);
+            $newId = $productModel->createAdminProduct($payload);
+            set_flash('success', $uploadedImagePath !== null ? 'Đã thêm sản phẩm mới và tải ảnh đại diện lên thành công.' : 'Đã thêm sản phẩm mới vào hệ thống.');
+            redirect('products.php?edit=' . $newId);
+        } catch (Throwable $e) {
+            if ($uploadedImagePath !== null) {
+                $uploadedImageFullPath = __DIR__ . '/../../uploads/' . $uploadedImagePath;
+                if (is_file($uploadedImageFullPath)) {
+                    @unlink($uploadedImageFullPath);
+                }
+            }
+
+            error_log('Admin product save error: ' . $e->getMessage());
+            $errors['general'] = 'Không thể lưu sản phẩm lúc này.';
+        }
     }
 }
 
@@ -458,7 +522,7 @@ render_admin_header('Quản lý sản phẩm');
                     <div>
                         <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]"><?= $formMode === 'edit' ? 'Chỉnh sửa' : 'Thêm mới' ?></p>
                         <h2 class="mt-2 text-2xl font-extrabold text-[#102118]"><?= $formMode === 'edit' ? 'Cập nhật sản phẩm' : 'Tạo sản phẩm mới' ?></h2>
-                        <p class="mt-2 text-sm text-[#6e8d7b]"><?= $formMode === 'edit' ? 'Điều chỉnh thông tin hiển thị, giá bán và tồn kho.' : 'Điền đủ thông tin để sản phẩm xuất hiện trên cửa hàng.' ?></p>
+                        <p class="mt-2 text-sm text-[#6e8d7b]"><?= $formMode === 'edit' ? 'Điều chỉnh thông tin hiển thị, giá bán, tồn kho và ảnh sản phẩm tại cùng một nơi.' : 'Điền đủ thông tin để sản phẩm và ảnh đại diện xuất hiện trên cửa hàng.' ?></p>
                     </div>
                     <?php if ($formMode === 'edit'): ?>
                         <a href="products.php" class="inline-flex rounded-full border border-[#d9e9de] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">Thêm mới</a>
@@ -471,7 +535,7 @@ render_admin_header('Quản lý sản phẩm');
                     </div>
                 <?php endif; ?>
 
-                <form method="POST" class="mt-6 space-y-5">
+                <form method="POST" enctype="multipart/form-data" class="mt-6 space-y-5">
                     <input type="hidden" name="csrf_token" value="<?= clean(csrf_token()) ?>">
                     <input type="hidden" name="action" value="<?= $formMode === 'edit' ? 'update' : 'create' ?>">
                     <?php if ($formMode === 'edit'): ?>
@@ -541,7 +605,50 @@ render_admin_header('Quản lý sản phẩm');
                     <div>
                         <label for="image" class="mb-2 block text-sm font-semibold text-[#102118]">Ảnh đại diện</label>
                         <input id="image" type="text" name="image" value="<?= clean($formData['image']) ?>" class="w-full rounded-2xl border border-[#d9e9de] px-4 py-3 text-sm text-[#102118] focus:border-[#2e9b63] focus:ring-[#2e9b63]" placeholder="Nhập URL ảnh hoặc đường dẫn trong uploads/products/...">
-                        <p class="mt-2 text-xs text-[#6e8d7b]">Bạn vẫn có thể dùng công cụ upload ảnh riêng nếu muốn tải ảnh từ máy tính.</p>
+                        <p class="mt-2 text-xs text-[#6e8d7b]">Bạn có thể nhập URL ảnh ngoài hoặc đường dẫn đã có trong `uploads/products/...`.</p>
+                    </div>
+
+                    <div class="rounded-[1.5rem] border border-[#d9e9de] bg-[#f8fbf9] p-5">
+                        <div class="flex flex-col gap-2">
+                            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Ảnh sản phẩm</p>
+                            <h3 class="text-lg font-extrabold text-[#102118]">Upload ảnh ngay trong form này</h3>
+                            <p class="text-sm text-[#5f7b6c]">
+                                Nếu bạn chọn file ảnh mới, hệ thống sẽ ưu tiên dùng file upload làm ảnh đại diện khi lưu sản phẩm.
+                            </p>
+                        </div>
+
+                        <div class="mt-4 grid gap-4 lg:grid-cols-[0.95fr_1.05fr]">
+                            <div class="rounded-[1.25rem] border border-[#d9e9de] bg-white p-4">
+                                <p class="text-sm font-semibold text-[#102118]">Ảnh hiện tại / xem trước</p>
+                                <img
+                                    id="productImagePreview"
+                                    src="<?= clean(($editingProduct['image_url'] ?? null) ?: (!empty($formData['image']) && preg_match('#^https?://#i', $formData['image']) ? $formData['image'] : (!empty($formData['image']) ? upload_url($formData['image']) : image_url('products/default.jpg')))) ?>"
+                                    alt="Ảnh sản phẩm xem trước"
+                                    class="mt-3 h-56 w-full rounded-2xl border border-[#edf4ef] object-cover"
+                                >
+                                <p class="mt-3 text-xs text-[#6e8d7b]">Khi chọn file mới, khung này sẽ xem trước ảnh trước lúc lưu.</p>
+                            </div>
+
+                            <div class="space-y-4">
+                                <div>
+                                    <label for="product_image" class="mb-2 block text-sm font-semibold text-[#102118]">Upload file ảnh</label>
+                                    <input id="product_image" name="product_image" type="file" accept="image/jpeg,image/png,image/gif,image/webp" class="block w-full rounded-2xl border <?= isset($errors['product_image']) ? 'border-red-300' : 'border-[#d9e9de]' ?> px-4 py-3 text-sm text-[#102118] file:mr-4 file:rounded-full file:border-0 file:bg-[#eef6f1] file:px-4 file:py-2 file:font-semibold file:text-[#2e9b63] hover:file:bg-[#e4f2ea]">
+                                    <p class="mt-2 text-xs text-[#6e8d7b]">Hỗ trợ JPG, PNG, GIF, WEBP. Giới hạn tối đa 5MB.</p>
+                                    <?php if (isset($errors['product_image'])): ?>
+                                        <p class="mt-2 text-sm text-red-600"><?= clean($errors['product_image']) ?></p>
+                                    <?php endif; ?>
+                                </div>
+
+                                <div class="rounded-2xl border border-[#d9e9de] bg-white px-4 py-4 text-sm text-[#4c6a5b]">
+                                    <p class="font-semibold text-[#102118]">Mẹo dùng nhanh</p>
+                                    <p class="mt-2">Nếu bạn chỉ muốn thay ảnh mà không đổi dữ liệu khác, chọn sản phẩm ở danh sách bên trái, upload file mới rồi bấm lưu.</p>
+                                    <div class="mt-3 flex flex-wrap gap-3">
+                                        <a href="check_images.php" class="inline-flex items-center rounded-full border border-[#d9e9de] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">Kiểm tra ảnh</a>
+                                        <a href="fix_images.php" class="inline-flex items-center rounded-full border border-[#d9e9de] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">Chuẩn hóa đường dẫn</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
                     <div>
@@ -613,5 +720,23 @@ render_admin_header('Quản lý sản phẩm');
         </div>
     </section>
 </div>
+
+<script>
+const productImageInput = document.getElementById('product_image');
+const productImagePreview = document.getElementById('productImagePreview');
+
+productImageInput?.addEventListener('change', (event) => {
+    const file = event.target.files?.[0];
+    if (!file || !productImagePreview) {
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (loadEvent) => {
+        productImagePreview.src = String(loadEvent.target?.result || '');
+    };
+    reader.readAsDataURL(file);
+});
+</script>
 
 <?php render_admin_footer(); ?>

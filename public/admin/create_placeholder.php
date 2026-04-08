@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
-require_admin_permission('uploads.manage', 'create_placeholder.php');
+require_admin_permission('products.manage', 'create_placeholder.php');
 
 $missingImages = [
     'combo-sen.png' => 'Combo Sen Đá',

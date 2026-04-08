@@ -145,13 +145,17 @@ function require_admin(string $redirectTarget = 'admin/dashboard.php'): void {
  */
 function admin_permission_catalog(): array {
     return [
+        'admin.full_access' => [
+            'label' => 'Toàn quyền quản trị',
+            'description' => 'Truy cập toàn bộ module quản trị mà không cần chọn riêng từng quyền.',
+        ],
         'orders.manage' => [
             'label' => 'Quản lý đơn hàng',
             'description' => 'Xem đơn, cập nhật trạng thái và duyệt thanh toán mô phỏng.',
         ],
         'products.manage' => [
             'label' => 'Quản lý sản phẩm',
-            'description' => 'Tạo, sửa, ẩn/hiện và cập nhật thông tin sản phẩm.',
+            'description' => 'Tạo, sửa, ẩn/hiện sản phẩm và quản lý luôn ảnh sản phẩm trong cùng màn hình.',
         ],
         'categories.manage' => [
             'label' => 'Quản lý danh mục',
@@ -160,10 +164,6 @@ function admin_permission_catalog(): array {
         'users.manage' => [
             'label' => 'Quản lý tài khoản',
             'description' => 'Phân quyền, khóa/mở và cập nhật tài khoản người dùng.',
-        ],
-        'uploads.manage' => [
-            'label' => 'Quản lý ảnh sản phẩm',
-            'description' => 'Upload ảnh, cập nhật URL ảnh và chạy các tiện ích ảnh.',
         ],
     ];
 }
@@ -189,6 +189,10 @@ function normalize_admin_permissions(mixed $permissions): array {
 
     foreach ($permissions as $permission) {
         $permission = trim((string)$permission);
+        if ($permission === 'uploads.manage') {
+            $permission = 'products.manage';
+        }
+
         if ($permission === '' || !in_array($permission, $allowed, true) || in_array($permission, $normalized, true)) {
             continue;
         }
@@ -212,11 +216,7 @@ function admin_has_full_access(?array $user = null): bool {
         return false;
     }
 
-    if (array_key_exists('has_full_admin_access', $user)) {
-        return (bool)$user['has_full_admin_access'];
-    }
-
-    return empty($user['admin_permissions']);
+    return in_array('admin.full_access', normalize_admin_permissions($user['admin_permissions'] ?? []), true);
 }
 
 /**

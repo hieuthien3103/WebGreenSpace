@@ -1,44 +1,45 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
-require_admin_permission('uploads.manage', 'upload_product_image.php');
+require_admin_permission('products.manage', 'upload_product_image.php');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    redirect('admin_upload_images.php');
+    redirect('products.php');
 }
 
 if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
     set_flash('error', 'Phiên làm việc đã hết hạn. Vui lòng thử lại.');
-    redirect('admin_upload_images.php');
+    redirect('products.php');
 }
 
 $productId = max(0, (int)($_POST['product_id_upload'] ?? 0));
+$redirectTarget = 'products.php' . ($productId > 0 ? '?edit=' . $productId : '');
 if ($productId <= 0) {
     set_flash('error', 'Sản phẩm không hợp lệ.');
-    redirect('admin_upload_images.php');
+    redirect('products.php');
 }
 
 $productModel = new Product();
 $product = $productModel->getAdminById($productId);
 if (!$product) {
     set_flash('error', 'Không tìm thấy sản phẩm cần upload ảnh.');
-    redirect('admin_upload_images.php');
+    redirect('products.php');
 }
 
 if (!isset($_FILES['product_image'])) {
     set_flash('error', 'Vui lòng chọn một ảnh để tải lên.');
-    redirect('admin_upload_images.php');
+    redirect($redirectTarget);
 }
 
 $validation = validate_uploaded_image($_FILES['product_image']);
 if (empty($validation['valid'])) {
     set_flash('error', (string)($validation['error'] ?? 'Ảnh tải lên không hợp lệ.'));
-    redirect('admin_upload_images.php');
+    redirect($redirectTarget);
 }
 
 $uploadDir = __DIR__ . '/../../uploads/products/';
 if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
     set_flash('error', 'Không thể tạo thư mục lưu ảnh.');
-    redirect('admin_upload_images.php');
+    redirect($redirectTarget);
 }
 
 $extension = (string)$validation['extension'];
@@ -49,7 +50,7 @@ $imagePath = 'products/' . $newFileName;
 try {
     if (!move_uploaded_file((string)$_FILES['product_image']['tmp_name'], $uploadPath)) {
         set_flash('error', 'Không thể lưu file ảnh đã tải lên.');
-        redirect('admin_upload_images.php');
+        redirect($redirectTarget);
     }
 
     $db = new Database();
@@ -69,4 +70,4 @@ try {
     set_flash('error', 'Không thể upload ảnh lúc này.');
 }
 
-redirect('admin_upload_images.php');
+redirect($redirectTarget);

@@ -78,11 +78,14 @@ function admin_user_permission_summary(array $user, array $permissionOptions): ?
 
     $labels = [];
     foreach (normalize_admin_permissions($user['admin_permissions'] ?? []) as $permission) {
+        if ($permission === 'admin.full_access') {
+            continue;
+        }
         $labels[] = $permissionOptions[$permission]['label'] ?? $permission;
     }
 
     if ($labels === []) {
-        return 'Chưa cấp quyền chi tiết';
+        return 'Chưa cấp quyền';
     }
 
     $summary = implode(', ', array_slice($labels, 0, 2));
@@ -186,6 +189,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $errors['admin_permissions'] = 'Danh sách quyền admin phụ không hợp lệ.';
                 break;
             }
+        }
+
+        if (in_array('admin.full_access', $formData['admin_permissions'], true)) {
+            $formData['admin_permissions'] = ['admin.full_access'];
         }
 
         if (!in_array($formData['status'], ['active', 'inactive'], true)) {
@@ -546,7 +553,7 @@ render_admin_header('Quản lý user');
                                 <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Admin phụ</p>
                                 <h3 class="text-lg font-extrabold text-[#102118]">Quyền chi tiết theo module</h3>
                                 <p class="text-sm text-[#5f7b6c]">
-                                    Để trống nghĩa là tài khoản admin có toàn quyền như hiện tại. Chọn vài quyền bên dưới để biến tài khoản này thành admin phụ theo từng nhóm chức năng.
+                                    Chỉ khi tick "Toàn quyền quản trị" thì tài khoản admin này mới có full quyền. Nếu không tick gì thì tài khoản sẽ không có quyền quản trị module nào.
                                 </p>
                             </div>
 
@@ -623,6 +630,8 @@ render_admin_header('Quản lý user');
 <script>
 const adminRoleSelect = document.getElementById('role_form');
 const adminPermissionsPanel = document.getElementById('admin_permissions_panel');
+const fullAccessCheckbox = document.querySelector('input[name="admin_permissions[]"][value="admin.full_access"]');
+const granularPermissionCheckboxes = Array.from(document.querySelectorAll('input[name="admin_permissions[]"]')).filter((input) => input.value !== 'admin.full_access');
 
 const syncAdminPermissionsPanel = () => {
     if (!adminRoleSelect || !adminPermissionsPanel) {
@@ -632,8 +641,24 @@ const syncAdminPermissionsPanel = () => {
     adminPermissionsPanel.classList.toggle('hidden', adminRoleSelect.value !== 'admin');
 };
 
+const syncAdminPermissionCheckboxes = () => {
+    if (!fullAccessCheckbox) {
+        return;
+    }
+
+    const hasFullAccess = fullAccessCheckbox.checked;
+    granularPermissionCheckboxes.forEach((input) => {
+        input.disabled = hasFullAccess;
+        if (hasFullAccess) {
+            input.checked = false;
+        }
+    });
+};
+
 adminRoleSelect?.addEventListener('change', syncAdminPermissionsPanel);
+fullAccessCheckbox?.addEventListener('change', syncAdminPermissionCheckboxes);
 syncAdminPermissionsPanel();
+syncAdminPermissionCheckboxes();
 </script>
 
 <?php render_admin_footer(); ?>

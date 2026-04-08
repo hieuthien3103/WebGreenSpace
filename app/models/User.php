@@ -339,7 +339,7 @@ class User {
         $rawPermissions = $user['admin_permissions'] ?? null;
         $user['admin_permissions'] = normalize_admin_permissions($rawPermissions);
         $user['has_full_admin_access'] = ($user['role'] ?? 'user') === 'admin'
-            && ($rawPermissions === null || $rawPermissions === '');
+            && in_array('admin.full_access', $user['admin_permissions'], true);
 
         return $user;
     }

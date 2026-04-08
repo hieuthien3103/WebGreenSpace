@@ -1,35 +1,36 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
-require_admin_permission('uploads.manage', 'update_product_image.php');
+require_admin_permission('products.manage', 'update_product_image.php');
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    redirect('admin_upload_images.php');
+    redirect('products.php');
 }
 
 if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
     set_flash('error', 'Phiên làm việc đã hết hạn. Vui lòng thử lại.');
-    redirect('admin_upload_images.php');
+    redirect('products.php');
 }
 
 $productId = max(0, (int)($_POST['product_id'] ?? 0));
 $imageUrl = trim((string)($_POST['image_url'] ?? ''));
+$redirectTarget = 'products.php' . ($productId > 0 ? '?edit=' . $productId : '');
 
 if ($productId <= 0) {
     set_flash('error', 'Sản phẩm không hợp lệ.');
-    redirect('admin_upload_images.php');
+    redirect('products.php');
 }
 
 $urlError = validate_image_source_url($imageUrl);
 if ($urlError !== null) {
     set_flash('error', $urlError);
-    redirect('admin_upload_images.php');
+    redirect($redirectTarget);
 }
 
 $productModel = new Product();
 $product = $productModel->getAdminById($productId);
 if (!$product) {
     set_flash('error', 'Không tìm thấy sản phẩm cần cập nhật ảnh.');
-    redirect('admin_upload_images.php');
+    redirect('products.php');
 }
 
 try {
@@ -47,4 +48,4 @@ try {
     set_flash('error', 'Không thể cập nhật ảnh lúc này.');
 }
 
-redirect('admin_upload_images.php');
+redirect($redirectTarget);

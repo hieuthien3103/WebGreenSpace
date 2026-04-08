@@ -1,6 +1,6 @@
 <?php
 require_once __DIR__ . '/bootstrap.php';
-require_admin_permission('uploads.manage', 'clear_cache.php');
+require_admin_permission('products.manage', 'clear_cache.php');
 require_once __DIR__ . '/../../app/models/Product.php';
 
 $messages = [];

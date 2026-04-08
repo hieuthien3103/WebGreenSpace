@@ -4,8 +4,8 @@ This directory contains administrative tools for managing the website.
 
 ## Available Tools
 
-### Image Management
-- `admin_upload_images.php` - Bulk image upload interface
+### Product Images
+- Product image editing/upload is now handled directly inside `products.php`
 - `check_images.php` - Check image availability and status
 - `fix_images.php` - Fix broken image paths
 - `update_product_image.php` - Update product images

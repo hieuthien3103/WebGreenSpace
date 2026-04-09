@@ -84,12 +84,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div class="space-y-3 text-sm text-white/80">
                     <div class="rounded-2xl bg-white/10 px-4 py-3">
-                        <p class="font-semibold text-white">URL admin</p>
-                        <p class="mt-1">/admin/login</p>
+                        <p class="font-semibold text-white">Quản lý vận hành</p>
+                        <p class="mt-1">Theo dõi đơn hàng, duyệt thanh toán và cập nhật trạng thái xử lý trong cùng một nơi.</p>
                     </div>
                     <div class="rounded-2xl bg-white/10 px-4 py-3">
-                        <p class="font-semibold text-white">Tài khoản seed mẫu</p>
-                        <p class="mt-1">admin@webgreenspace.com / password</p>
+                        <p class="font-semibold text-white">Không gian làm việc riêng</p>
+                        <p class="mt-1">Khu vực quản trị được tách biệt để đội vận hành xử lý hệ thống mà không ảnh hưởng tới luồng mua sắm của khách.</p>
                     </div>
                 </div>
             </section>
@@ -140,7 +140,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 type="text"
                                 value="<?= clean($old['identifier']) ?>"
                                 class="w-full rounded-2xl border <?= !empty($errors['identifier']) ? 'border-red-300' : 'border-[#d8eadf]' ?> bg-white px-4 py-3 text-[#102118] focus:border-[#2e9b63] focus:ring-[#2e9b63]/20"
-                                placeholder="admin@webgreenspace.com"
+                                placeholder="Nhập email hoặc username admin"
                                 autocomplete="username"
                             >
                             <?php if (!empty($errors['identifier'])): ?>

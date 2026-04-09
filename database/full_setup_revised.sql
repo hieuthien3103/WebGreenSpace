@@ -356,8 +356,11 @@ CREATE TABLE inventory_logs (
 -- ========================================
 -- Sample data
 -- ========================================
+-- Seeded admin password is intentionally randomized and not published.
+-- After importing a fresh database, set the real admin password locally with:
+-- php scripts/reset_admin_password.php admin@webgreenspace.com "<new-strong-password>"
 INSERT INTO users (username, email, password, full_name, phone, role, admin_permissions, status) VALUES
-('admin', 'admin@webgreenspace.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Administrator', '0900000000', 'admin', '["admin.full_access"]', 'active'),
+('admin', 'admin@webgreenspace.com', '$2y$10$x8aassY8NqzQOpmr0VRgK.cpQUMFEMuNt2lmlBPsV9AxIdT9itWO.', 'Administrator', '0900000000', 'admin', '["admin.full_access"]', 'active'),
 ('user01', 'user01@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Nguyễn Văn A', '0901234567', 'user', NULL, 'active'),
 ('user02', 'user02@example.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Trần Thị B', '0912345678', 'user', NULL, 'active');
 

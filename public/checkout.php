@@ -164,6 +164,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 redirect('orders.php');
             }
 
+            if (!empty($result['cart_changed'])) {
+                set_flash('error', (string)($result['errors']['general'] ?? 'Giỏ hàng vừa thay đổi tồn kho. Vui lòng kiểm tra lại trước khi đặt đơn.'));
+                redirect('cart.php');
+            }
+
             $errors = $result['errors'] ?? ['general' => 'Không thể thanh toán lúc này.'];
         }
     }

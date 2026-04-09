@@ -452,6 +452,28 @@ function verify_csrf_token(?string $token): bool {
 }
 
 /**
+ * Resolve the application secret used for HMAC-style tokens.
+ */
+function app_secret(): string {
+    if (APP_SECRET !== '') {
+        return APP_SECRET;
+    }
+
+    if (DB_PASS !== '') {
+        return DB_PASS;
+    }
+
+    return hash('sha256', BASE_PATH . '|' . APP_URL . '|qr-payment-fallback');
+}
+
+/**
+ * Build a signed QR payment token for one order.
+ */
+function build_qr_payment_token(int $orderId, int $userId, string $orderNumber): string {
+    return hash_hmac('sha256', $orderId . '|' . $userId . '|' . $orderNumber, app_secret());
+}
+
+/**
  * Resolve a safe internal redirect target.
  *
  * @param string|null $target
@@ -469,6 +491,10 @@ function safe_redirect_target(?string $target, string $fallback = 'home.php'): s
     }
 
     if (preg_match('#^(?:https?:)?//#i', $target) === 1) {
+        return $fallback;
+    }
+
+    if (preg_match('/^[a-z][a-z0-9+\-.]*:/i', $target) === 1) {
         return $fallback;
     }
 

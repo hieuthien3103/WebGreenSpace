@@ -30,6 +30,7 @@ define('DB_CHARSET', 'utf8mb4');
 // Application Configuration
 define('APP_NAME', getenv('APP_NAME') ?: 'WebGreenSpace');
 define('APP_URL', getenv('APP_URL') ?: 'http://localhost/WebGreenSpace');
+define('APP_SECRET', trim((string)(getenv('APP_SECRET') ?: '')));
 define('BASE_PATH', dirname(__DIR__));
 
 // Path Configuration
@@ -49,6 +50,10 @@ define('UPLOAD_URL', APP_URL . '/uploads');
 define('SESSION_LIFETIME', 7200); // 2 hours
 ini_set('session.gc_maxlifetime', SESSION_LIFETIME);
 session_set_cookie_params(SESSION_LIFETIME);
+
+// Order Expiry Configuration
+define('ORDER_PENDING_ONLINE_MOCK_EXPIRY_MINUTES', max(5, (int)(getenv('ORDER_PENDING_ONLINE_MOCK_EXPIRY_MINUTES') ?: 30)));
+define('ORDER_PENDING_COD_EXPIRY_MINUTES', max(30, (int)(getenv('ORDER_PENDING_COD_EXPIRY_MINUTES') ?: 360)));
 
 // Security
 define('HASH_ALGO', PASSWORD_DEFAULT);

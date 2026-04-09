@@ -51,9 +51,12 @@ include 'includes/header.php';
                     </p>
                 </div>
                 <div class="space-y-3 text-sm text-white/80">
-                    <p>Tài khoản mẫu có sẵn trong seed:</p>
-                    <p class="rounded-2xl bg-white/10 px-4 py-3 font-medium">Email: admin@webgreenspace.com</p>
-                    <p class="rounded-2xl bg-white/10 px-4 py-3 font-medium">Mật khẩu: password</p>
+                    <p class="rounded-2xl bg-white/10 px-4 py-3 font-medium">
+                        Lưu địa chỉ nhận hàng, theo dõi đơn và quay lại giỏ hàng nhanh hơn trên mọi thiết bị.
+                    </p>
+                    <p class="rounded-2xl bg-white/10 px-4 py-3 font-medium">
+                        Nếu bạn quản trị hệ thống, khu vực admin có trang đăng nhập riêng để tách biệt với trải nghiệm mua sắm.
+                    </p>
                 </div>
             </section>
 
@@ -81,7 +84,7 @@ include 'includes/header.php';
                                 type="text"
                                 value="<?= clean($old['identifier']) ?>"
                                 class="w-full rounded-2xl border <?= !empty($errors['identifier']) ? 'border-red-300' : 'border-[#d8eadf] dark:border-[#2d4337]' ?> bg-white px-4 py-3 text-text-main focus:border-primary focus:ring-primary/20 dark:bg-[#101914] dark:text-white"
-                                placeholder="admin@webgreenspace.com"
+                                placeholder="name@example.com"
                                 autocomplete="username"
                             >
                             <?php if (!empty($errors['identifier'])): ?>

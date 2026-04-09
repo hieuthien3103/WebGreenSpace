@@ -3,8 +3,7 @@ require_once __DIR__ . '/../config/config.php';
 require_once __DIR__ . '/../config/database.php';
 
 function qr_pay_build_token(int $orderId, int $userId, string $orderNumber): string {
-    $secret = (string)(DB_PASS ?: APP_NAME);
-    return hash_hmac('sha256', $orderId . '|' . $userId . '|' . $orderNumber, $secret);
+    return build_qr_payment_token($orderId, $userId, $orderNumber);
 }
 
 $orderModel = new Order();
@@ -27,7 +26,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$portalError) {
     $action = (string)($_POST['action'] ?? '');
 
     if ($action === 'confirm_qr_payment') {
-        if ((string)$order['payment_status'] === 'pending_review') {
+        if ((string)($order['order_status'] ?? '') === 'cancelled') {
+            $portalError = 'Don hang da bi huy nen khong the xac nhan thanh toan QR nua.';
+        } elseif ((string)$order['payment_status'] === 'pending_review') {
             $portalSuccess = 'Yeu cau thanh toan da duoc gui truoc do. Admin dang xu ly.';
         } elseif ((string)$order['payment_status'] === 'paid') {
             $portalSuccess = 'Don hang da duoc admin duyet thanh toan.';
@@ -82,7 +83,11 @@ $pageTitle = 'Thanh toan QR mo phong - GreenSpace';
                     <p><strong>Trang thai:</strong> <?= clean((string)$order['payment_status']) ?></p>
                 </div>
 
-                <?php if ((string)$order['payment_status'] === 'unpaid'): ?>
+                <?php if ((string)($order['order_status'] ?? '') === 'cancelled'): ?>
+                    <div class="mt-5 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                        Don hang nay da bi huy, lien ket thanh toan QR khong con hieu luc.
+                    </div>
+                <?php elseif ((string)$order['payment_status'] === 'unpaid'): ?>
                     <form method="POST" class="mt-5">
                         <input type="hidden" name="order_id" value="<?= clean((string)$order['id']) ?>">
                         <input type="hidden" name="token" value="<?= clean($token) ?>">

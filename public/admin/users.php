@@ -292,6 +292,44 @@ if ($page > $totalPages) {
 $offset = ($page - 1) * $perPage;
 $users = $userModel->getAdminList($search, $roleFilter, $statusFilter, $perPage, $offset);
 $isEditingCurrentUser = $editingUser && (int)$editingUser['id'] === $currentUserId;
+$userListStateUrl = 'users.php' . admin_users_query([
+    'q' => $search,
+    'role' => $roleFilter,
+    'status' => $statusFilter,
+    'page' => $page,
+]);
+
+$defaultUserFormState = admin_user_defaults();
+$defaultUserFormState['id'] = '';
+$defaultUserFormState['display_name'] = '';
+$defaultUserFormState['permission_summary'] = '';
+$defaultUserFormState['created_at'] = '';
+$defaultUserFormState['updated_at'] = '';
+$defaultUserFormState['is_current_user'] = false;
+$defaultUserFormState['profile_url'] = '../profile.php';
+
+$initialUserPermissionSummary = admin_user_permission_summary([
+    'role' => $formData['role'],
+    'admin_permissions' => $formData['admin_permissions'],
+    'has_full_admin_access' => in_array('admin.full_access', $formData['admin_permissions'], true),
+], $permissionOptions);
+
+$initialUserFormState = [
+    'id' => $editingUser ? (string)$editingUser['id'] : '',
+    'username' => $formData['username'],
+    'email' => $formData['email'],
+    'full_name' => $formData['full_name'],
+    'phone' => $formData['phone'],
+    'role' => $formData['role'],
+    'admin_permissions' => array_values($formData['admin_permissions']),
+    'status' => $formData['status'],
+    'display_name' => $editingUser ? (string)($formData['full_name'] !== '' ? $formData['full_name'] : $formData['username']) : '',
+    'permission_summary' => $initialUserPermissionSummary ?? '',
+    'created_at' => $editingUser ? format_date((string)$editingUser['created_at'], 'd/m/Y H:i') : '',
+    'updated_at' => $editingUser ? format_date((string)$editingUser['updated_at'], 'd/m/Y H:i') : '',
+    'is_current_user' => (bool)$isEditingCurrentUser,
+    'profile_url' => '../profile.php',
+];
 
 render_admin_header('Quản lý user');
 ?>
@@ -393,6 +431,22 @@ render_admin_header('Quản lý user');
                                         'page' => $page,
                                     ]);
                                     $isCurrentRowUser = (int)$user['id'] === $currentUserId;
+                                    $userClientPayload = [
+                                        'id' => (string)$user['id'],
+                                        'username' => (string)($user['username'] ?? ''),
+                                        'email' => (string)($user['email'] ?? ''),
+                                        'full_name' => (string)($user['full_name'] ?? ''),
+                                        'phone' => (string)($user['phone'] ?? ''),
+                                        'role' => (string)($user['role'] ?? 'user'),
+                                        'admin_permissions' => normalize_admin_permissions($user['admin_permissions'] ?? []),
+                                        'status' => (string)($user['status'] ?? 'active'),
+                                        'display_name' => (string)(($user['full_name'] ?? '') !== '' ? $user['full_name'] : ($user['username'] ?? '')),
+                                        'permission_summary' => (string)($permissionSummary ?? ''),
+                                        'created_at' => format_date((string)$user['created_at'], 'd/m/Y H:i'),
+                                        'updated_at' => format_date((string)$user['updated_at'], 'd/m/Y H:i'),
+                                        'is_current_user' => $isCurrentRowUser,
+                                        'profile_url' => '../profile.php',
+                                    ];
                                     ?>
                                     <tr class="border-b border-[#f4f8f5] align-top last:border-b-0">
                                         <td class="py-4 pr-4">
@@ -429,9 +483,13 @@ render_admin_header('Quản lý user');
                                             </span>
                                         </td>
                                         <td class="py-4">
-                                            <a href="users.php<?= clean($editQuery) ?>" class="text-sm font-semibold text-[#2e9b63] hover:text-[#22784d]">
+                                            <button
+                                                type="button"
+                                                class="text-sm font-semibold text-[#2e9b63] hover:text-[#22784d]"
+                                                data-edit-user="<?= clean(json_encode($userClientPayload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT)) ?>"
+                                            >
                                                 Chỉnh sửa
-                                            </a>
+                                            </button>
                                         </td>
                                     </tr>
                                 <?php endforeach; ?>
@@ -459,116 +517,137 @@ render_admin_header('Quản lý user');
         </div>
 
         <div class="space-y-6">
-            <article class="rounded-[1.75rem] border border-[#d9e9de] bg-white p-6 shadow-sm lg:sticky lg:top-8">
-                <?php if ($editingUser): ?>
-                    <div class="flex items-start justify-between gap-4">
-                        <div>
-                            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Chỉnh sửa user</p>
-                            <h2 class="mt-2 text-2xl font-extrabold text-[#102118]"><?= clean($editingUser['full_name'] ?: $editingUser['username']) ?></h2>
-                            <p class="mt-2 text-sm text-[#6e8d7b]">
-                                Cập nhật thông tin liên hệ, vai trò và trạng thái truy cập cho tài khoản này.
-                            </p>
-                        </div>
-                        <a href="users.php" class="inline-flex rounded-full border border-[#d9e9de] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">Đóng</a>
+            <article id="userFormCard" class="rounded-[1.75rem] border border-[#d9e9de] bg-white p-6 shadow-sm lg:sticky lg:top-8">
+                <div class="flex items-start justify-between gap-4">
+                    <div>
+                        <p id="userFormModeLabel" class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]"><?= $editingUser ? 'Chỉnh sửa user' : 'Chi tiết user' ?></p>
+                        <h2 id="userFormTitle" class="mt-2 text-2xl font-extrabold text-[#102118]"><?= $editingUser ? clean($editingUser['full_name'] ?: $editingUser['username']) : 'Chọn một tài khoản để chỉnh sửa' ?></h2>
+                        <p id="userFormDescription" class="mt-2 text-sm text-[#6e8d7b]">
+                            <?= $editingUser ? 'Cập nhật thông tin liên hệ, vai trò và trạng thái truy cập cho tài khoản này.' : 'Từ danh sách bên trái, bấm “Chỉnh sửa” để cập nhật vai trò, trạng thái hoặc thông tin liên hệ của user.' ?>
+                        </p>
                     </div>
+                    <button type="button" id="resetUserFormButton" class="inline-flex rounded-full border border-[#d9e9de] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63] <?= $editingUser ? '' : 'hidden' ?>">Đóng</button>
+                </div>
 
-                    <?php if (!empty($errors['general'])): ?>
-                        <div class="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                            <?= clean($errors['general']) ?>
-                        </div>
-                    <?php elseif ($isEditingCurrentUser): ?>
-                        <div class="mt-6 rounded-2xl border border-[#d9e9de] bg-[#f8fbf9] px-4 py-3 text-sm text-[#4c6a5b]">
-                            Bạn đang chỉnh sửa tài khoản admin hiện tại. Hệ thống cho phép cập nhật thông tin cá nhân nhưng không cho tự đổi vai trò, tự khóa tài khoản hoặc tự thu hẹp quyền quản trị của chính mình.
-                        </div>
-                    <?php endif; ?>
+                <?php if (!empty($errors['general'])): ?>
+                    <div id="userGeneralErrorBanner" class="mt-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+                        <?= clean($errors['general']) ?>
+                    </div>
+                <?php endif; ?>
 
-                    <form method="POST" class="mt-6 space-y-5">
-                        <input type="hidden" name="csrf_token" value="<?= clean(csrf_token()) ?>">
-                        <input type="hidden" name="action" value="update">
-                        <input type="hidden" name="user_id" value="<?= clean((string)$editingUser['id']) ?>">
+                <div id="currentUserRestrictionsNotice" class="<?= $isEditingCurrentUser ? '' : 'hidden ' ?>mt-6 rounded-2xl border border-[#d9e9de] bg-[#f8fbf9] px-4 py-3 text-sm text-[#4c6a5b]">
+                    Bạn đang chỉnh sửa tài khoản admin hiện tại. Hệ thống cho phép cập nhật thông tin cá nhân nhưng không cho tự đổi vai trò, tự khóa tài khoản hoặc tự thu hẹp quyền quản trị của chính mình.
+                </div>
 
-                        <div>
-                            <label for="full_name" class="mb-2 block text-sm font-semibold text-[#102118]">Họ tên</label>
-                            <input id="full_name" type="text" name="full_name" value="<?= clean($formData['full_name']) ?>" class="w-full rounded-2xl border <?= isset($errors['full_name']) ? 'border-red-300' : 'border-[#d9e9de]' ?> px-4 py-3 text-sm text-[#102118] focus:border-[#2e9b63] focus:ring-[#2e9b63]" placeholder="Nhập họ tên người dùng">
-                            <?php if (isset($errors['full_name'])): ?>
-                                <p class="mt-2 text-sm text-red-600"><?= clean($errors['full_name']) ?></p>
-                            <?php endif; ?>
-                        </div>
+                <div id="userFormEmptyState" class="<?= $editingUser ? 'hidden ' : '' ?>mt-6 rounded-[1.5rem] border border-dashed border-[#d9e9de] bg-[#f8fbf9] px-5 py-8 text-sm leading-6 text-[#5f7b6c]">
+                    <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Panel tài khoản</p>
+                    <h3 class="mt-3 text-xl font-extrabold text-[#102118]">Mở một user để xem và chỉnh sửa tập trung</h3>
+                    <p class="mt-3">
+                        Khu này dành cho cập nhật hồ sơ, vai trò và trạng thái của tài khoản đang có. Để tạo người dùng mới, khách có thể đăng ký ở trang công khai rồi admin quay lại đây để phân quyền hoặc khóa/mở khi cần.
+                    </p>
+                </div>
 
-                        <div>
-                            <label for="username" class="mb-2 block text-sm font-semibold text-[#102118]">Tên đăng nhập</label>
-                            <input id="username" type="text" name="username" value="<?= clean($formData['username']) ?>" class="w-full rounded-2xl border <?= isset($errors['username']) ? 'border-red-300' : 'border-[#d9e9de]' ?> px-4 py-3 text-sm text-[#102118] focus:border-[#2e9b63] focus:ring-[#2e9b63]" placeholder="Ví dụ: nguyenvana">
-                            <?php if (isset($errors['username'])): ?>
-                                <p class="mt-2 text-sm text-red-600"><?= clean($errors['username']) ?></p>
-                            <?php endif; ?>
-                        </div>
+                <form id="userAdminForm" method="POST" class="mt-6 space-y-6 <?= $editingUser ? '' : 'hidden' ?>">
+                    <input type="hidden" name="csrf_token" value="<?= clean(csrf_token()) ?>">
+                    <input type="hidden" name="action" value="update">
+                    <input id="userIdInput" type="hidden" name="user_id" value="<?= $editingUser ? clean((string)$editingUser['id']) : '' ?>">
 
-                        <div>
-                            <label for="email" class="mb-2 block text-sm font-semibold text-[#102118]">Email</label>
-                            <input id="email" type="email" name="email" value="<?= clean($formData['email']) ?>" class="w-full rounded-2xl border <?= isset($errors['email']) ? 'border-red-300' : 'border-[#d9e9de]' ?> px-4 py-3 text-sm text-[#102118] focus:border-[#2e9b63] focus:ring-[#2e9b63]" placeholder="user@example.com">
-                            <?php if (isset($errors['email'])): ?>
-                                <p class="mt-2 text-sm text-red-600"><?= clean($errors['email']) ?></p>
-                            <?php endif; ?>
+                    <section class="rounded-[1.5rem] border border-[#edf4ef] bg-[#fcfefd] p-5">
+                        <div class="flex flex-col gap-2">
+                            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Thông tin tài khoản</p>
+                            <h3 class="text-lg font-extrabold text-[#102118]">Hồ sơ và cách liên hệ</h3>
+                            <p class="text-sm text-[#5f7b6c]">Nhóm các trường định danh vào cùng một nơi để dễ đối chiếu trước khi lưu.</p>
                         </div>
 
-                        <div>
-                            <label for="phone" class="mb-2 block text-sm font-semibold text-[#102118]">Số điện thoại</label>
-                            <input id="phone" type="text" name="phone" value="<?= clean($formData['phone']) ?>" class="w-full rounded-2xl border <?= isset($errors['phone']) ? 'border-red-300' : 'border-[#d9e9de]' ?> px-4 py-3 text-sm text-[#102118] focus:border-[#2e9b63] focus:ring-[#2e9b63]" placeholder="0901234567">
-                            <?php if (isset($errors['phone'])): ?>
-                                <p class="mt-2 text-sm text-red-600"><?= clean($errors['phone']) ?></p>
-                            <?php endif; ?>
-                        </div>
-
-                        <div class="grid gap-4 sm:grid-cols-2">
+                        <div class="mt-5 grid gap-4 sm:grid-cols-2">
                             <div>
-                                <label for="role_form" class="mb-2 block text-sm font-semibold text-[#102118]">Vai trò</label>
-                                <?php if ($isEditingCurrentUser): ?>
-                                    <input type="hidden" name="role" value="<?= clean($formData['role']) ?>">
-                                <?php endif; ?>
-                                <select id="role_form" name="<?= $isEditingCurrentUser ? 'role_display' : 'role' ?>" <?= $isEditingCurrentUser ? 'disabled' : '' ?> class="w-full rounded-2xl border <?= isset($errors['role']) ? 'border-red-300' : 'border-[#d9e9de]' ?> px-4 py-3 text-sm text-[#102118] focus:border-[#2e9b63] focus:ring-[#2e9b63] disabled:cursor-not-allowed disabled:bg-[#f4f7f5] disabled:text-[#6e8d7b]">
-                                    <option value="user" <?= $formData['role'] === 'user' ? 'selected' : '' ?>>User</option>
-                                    <option value="admin" <?= $formData['role'] === 'admin' ? 'selected' : '' ?>>Admin</option>
-                                </select>
-                                <?php if (isset($errors['role'])): ?>
-                                    <p class="mt-2 text-sm text-red-600"><?= clean($errors['role']) ?></p>
+                                <label for="full_name" class="mb-2 block text-sm font-semibold text-[#102118]">Họ tên</label>
+                                <input id="full_name" type="text" name="full_name" value="<?= clean($formData['full_name']) ?>" class="w-full rounded-2xl border <?= isset($errors['full_name']) ? 'border-red-300' : 'border-[#d9e9de]' ?> px-4 py-3 text-sm text-[#102118] focus:border-[#2e9b63] focus:ring-[#2e9b63]" placeholder="Nhập họ tên người dùng">
+                                <?php if (isset($errors['full_name'])): ?>
+                                    <p class="mt-2 text-sm text-red-600"><?= clean($errors['full_name']) ?></p>
                                 <?php endif; ?>
                             </div>
+
                             <div>
-                                <label for="status_form" class="mb-2 block text-sm font-semibold text-[#102118]">Trạng thái</label>
-                                <?php if ($isEditingCurrentUser): ?>
-                                    <input type="hidden" name="status" value="<?= clean($formData['status']) ?>">
+                                <label for="username" class="mb-2 block text-sm font-semibold text-[#102118]">Tên đăng nhập</label>
+                                <input id="username" type="text" name="username" value="<?= clean($formData['username']) ?>" class="w-full rounded-2xl border <?= isset($errors['username']) ? 'border-red-300' : 'border-[#d9e9de]' ?> px-4 py-3 text-sm text-[#102118] focus:border-[#2e9b63] focus:ring-[#2e9b63]" placeholder="Ví dụ: nguyenvana">
+                                <?php if (isset($errors['username'])): ?>
+                                    <p class="mt-2 text-sm text-red-600"><?= clean($errors['username']) ?></p>
                                 <?php endif; ?>
-                                <select id="status_form" name="<?= $isEditingCurrentUser ? 'status_display' : 'status' ?>" <?= $isEditingCurrentUser ? 'disabled' : '' ?> class="w-full rounded-2xl border <?= isset($errors['status']) ? 'border-red-300' : 'border-[#d9e9de]' ?> px-4 py-3 text-sm text-[#102118] focus:border-[#2e9b63] focus:ring-[#2e9b63] disabled:cursor-not-allowed disabled:bg-[#f4f7f5] disabled:text-[#6e8d7b]">
-                                    <option value="active" <?= $formData['status'] === 'active' ? 'selected' : '' ?>>Đang hoạt động</option>
-                                    <option value="inactive" <?= $formData['status'] === 'inactive' ? 'selected' : '' ?>>Đã khóa</option>
-                                </select>
-                                <?php if (isset($errors['status'])): ?>
-                                    <p class="mt-2 text-sm text-red-600"><?= clean($errors['status']) ?></p>
+                            </div>
+
+                            <div>
+                                <label for="email" class="mb-2 block text-sm font-semibold text-[#102118]">Email</label>
+                                <input id="email" type="email" name="email" value="<?= clean($formData['email']) ?>" class="w-full rounded-2xl border <?= isset($errors['email']) ? 'border-red-300' : 'border-[#d9e9de]' ?> px-4 py-3 text-sm text-[#102118] focus:border-[#2e9b63] focus:ring-[#2e9b63]" placeholder="user@example.com">
+                                <?php if (isset($errors['email'])): ?>
+                                    <p class="mt-2 text-sm text-red-600"><?= clean($errors['email']) ?></p>
+                                <?php endif; ?>
+                            </div>
+
+                            <div>
+                                <label for="phone" class="mb-2 block text-sm font-semibold text-[#102118]">Số điện thoại</label>
+                                <input id="phone" type="text" name="phone" value="<?= clean($formData['phone']) ?>" class="w-full rounded-2xl border <?= isset($errors['phone']) ? 'border-red-300' : 'border-[#d9e9de]' ?> px-4 py-3 text-sm text-[#102118] focus:border-[#2e9b63] focus:ring-[#2e9b63]" placeholder="0901234567">
+                                <?php if (isset($errors['phone'])): ?>
+                                    <p class="mt-2 text-sm text-red-600"><?= clean($errors['phone']) ?></p>
                                 <?php endif; ?>
                             </div>
                         </div>
+                    </section>
 
-                        <div id="admin_permissions_panel" class="<?= $formData['role'] === 'admin' ? '' : 'hidden ' ?>rounded-[1.5rem] border border-[#d9e9de] bg-[#f8fbf9] p-5">
-                            <div class="flex flex-col gap-2">
-                                <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Admin phụ</p>
-                                <h3 class="text-lg font-extrabold text-[#102118]">Quyền chi tiết theo module</h3>
-                                <p class="text-sm text-[#5f7b6c]">
-                                    Chỉ khi tick "Toàn quyền quản trị" thì tài khoản admin này mới có full quyền. Nếu không tick gì thì tài khoản sẽ không có quyền quản trị module nào.
-                                </p>
-                            </div>
+                    <section class="rounded-[1.5rem] border border-[#edf4ef] bg-white p-5">
+                        <div class="flex flex-col gap-2">
+                            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Quyền truy cập</p>
+                            <h3 class="text-lg font-extrabold text-[#102118]">Vai trò, trạng thái và phạm vi quản trị</h3>
+                            <p class="text-sm text-[#5f7b6c]">Phần này gom toàn bộ quyền hạn vào một chỗ để tránh sửa sót hoặc bỏ quên trạng thái tài khoản.</p>
+                        </div>
 
-                            <?php if ($isEditingCurrentUser): ?>
-                                <div class="mt-4 rounded-2xl border border-[#d9e9de] bg-white px-4 py-3 text-sm text-[#4c6a5b]">
-                                    Bạn không thể tự thay đổi phạm vi quyền admin của mình tại màn này.
+                        <div class="mt-5 space-y-5">
+                            <div class="grid gap-4 sm:grid-cols-2">
+                                <div>
+                                    <label for="role_form" class="mb-2 block text-sm font-semibold text-[#102118]">Vai trò</label>
+                                    <input id="userRoleHiddenInput" type="hidden" name="<?= $isEditingCurrentUser ? 'role' : '' ?>" value="<?= $isEditingCurrentUser ? clean($formData['role']) : '' ?>">
+                                    <select id="role_form" name="<?= $isEditingCurrentUser ? 'role_display' : 'role' ?>" <?= $isEditingCurrentUser ? 'disabled' : '' ?> class="w-full rounded-2xl border <?= isset($errors['role']) ? 'border-red-300' : 'border-[#d9e9de]' ?> px-4 py-3 text-sm text-[#102118] focus:border-[#2e9b63] focus:ring-[#2e9b63] disabled:cursor-not-allowed disabled:bg-[#f4f7f5] disabled:text-[#6e8d7b]">
+                                        <option value="user" <?= $formData['role'] === 'user' ? 'selected' : '' ?>>User</option>
+                                        <option value="admin" <?= $formData['role'] === 'admin' ? 'selected' : '' ?>>Admin</option>
+                                    </select>
+                                    <?php if (isset($errors['role'])): ?>
+                                        <p class="mt-2 text-sm text-red-600"><?= clean($errors['role']) ?></p>
+                                    <?php endif; ?>
                                 </div>
-                                <?php foreach ($formData['admin_permissions'] as $permission): ?>
-                                    <input type="hidden" name="admin_permissions[]" value="<?= clean($permission) ?>">
-                                <?php endforeach; ?>
-                            <?php else: ?>
+                                <div>
+                                    <label for="status_form" class="mb-2 block text-sm font-semibold text-[#102118]">Trạng thái</label>
+                                    <input id="userStatusHiddenInput" type="hidden" name="<?= $isEditingCurrentUser ? 'status' : '' ?>" value="<?= $isEditingCurrentUser ? clean($formData['status']) : '' ?>">
+                                    <select id="status_form" name="<?= $isEditingCurrentUser ? 'status_display' : 'status' ?>" <?= $isEditingCurrentUser ? 'disabled' : '' ?> class="w-full rounded-2xl border <?= isset($errors['status']) ? 'border-red-300' : 'border-[#d9e9de]' ?> px-4 py-3 text-sm text-[#102118] focus:border-[#2e9b63] focus:ring-[#2e9b63] disabled:cursor-not-allowed disabled:bg-[#f4f7f5] disabled:text-[#6e8d7b]">
+                                        <option value="active" <?= $formData['status'] === 'active' ? 'selected' : '' ?>>Đang hoạt động</option>
+                                        <option value="inactive" <?= $formData['status'] === 'inactive' ? 'selected' : '' ?>>Đã khóa</option>
+                                    </select>
+                                    <?php if (isset($errors['status'])): ?>
+                                        <p class="mt-2 text-sm text-red-600"><?= clean($errors['status']) ?></p>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+
+                            <div id="admin_permissions_panel" class="<?= $formData['role'] === 'admin' ? '' : 'hidden ' ?>rounded-[1.5rem] border border-[#d9e9de] bg-[#f8fbf9] p-5">
+                                <div class="flex flex-col gap-2">
+                                    <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Admin phụ</p>
+                                    <h3 class="text-lg font-extrabold text-[#102118]">Quyền chi tiết theo module</h3>
+                                    <p class="text-sm text-[#5f7b6c]">
+                                        Chỉ khi tick "Toàn quyền quản trị" thì tài khoản admin này mới có full quyền. Nếu không tick gì thì tài khoản sẽ không có quyền quản trị module nào.
+                                    </p>
+                                </div>
+
                                 <div class="mt-4 grid gap-3">
                                     <?php foreach ($permissionOptions as $permission => $meta): ?>
                                         <label class="flex items-start gap-3 rounded-2xl border border-[#d9e9de] bg-white px-4 py-4">
-                                            <input type="checkbox" name="admin_permissions[]" value="<?= clean($permission) ?>" <?= in_array($permission, $formData['admin_permissions'], true) ? 'checked' : '' ?> class="mt-1 rounded border-[#cfe0d5] text-[#2e9b63] focus:ring-[#2e9b63]">
+                                            <input
+                                                type="checkbox"
+                                                data-admin-permission-checkbox
+                                                name="admin_permissions[]"
+                                                value="<?= clean($permission) ?>"
+                                                <?= in_array($permission, $formData['admin_permissions'], true) ? 'checked' : '' ?>
+                                                <?= $isEditingCurrentUser ? 'disabled' : '' ?>
+                                                class="mt-1 rounded border-[#cfe0d5] text-[#2e9b63] focus:ring-[#2e9b63]"
+                                            >
                                             <span>
                                                 <span class="block text-sm font-semibold text-[#102118]"><?= clean($meta['label']) ?></span>
                                                 <span class="mt-1 block text-sm text-[#5f7b6c]"><?= clean($meta['description']) ?></span>
@@ -576,44 +655,52 @@ render_admin_header('Quản lý user');
                                         </label>
                                     <?php endforeach; ?>
                                 </div>
-                            <?php endif; ?>
 
-                            <?php if (isset($errors['admin_permissions'])): ?>
-                                <p class="mt-3 text-sm text-red-600"><?= clean($errors['admin_permissions']) ?></p>
-                            <?php endif; ?>
+                                <div id="adminPermissionsHiddenInputs">
+                                    <?php if ($isEditingCurrentUser): ?>
+                                        <?php foreach ($formData['admin_permissions'] as $permission): ?>
+                                            <input type="hidden" name="admin_permissions[]" value="<?= clean($permission) ?>">
+                                        <?php endforeach; ?>
+                                    <?php endif; ?>
+                                </div>
+
+                                <?php if (isset($errors['admin_permissions'])): ?>
+                                    <p class="mt-3 text-sm text-red-600"><?= clean($errors['admin_permissions']) ?></p>
+                                <?php endif; ?>
+                            </div>
                         </div>
+                    </section>
 
-                        <div class="rounded-[1.25rem] border border-[#edf4ef] bg-[#f8fbf9] px-4 py-4 text-sm text-[#4c6a5b]">
-                            <p class="font-semibold text-[#102118]">Thông tin thêm</p>
-                            <p class="mt-2">Tạo lúc: <?= format_date((string)$editingUser['created_at'], 'd/m/Y H:i') ?></p>
-                            <p class="mt-1">Cập nhật gần nhất: <?= format_date((string)$editingUser['updated_at'], 'd/m/Y H:i') ?></p>
-                            <?php if (($editingUser['role'] ?? 'user') === 'admin'): ?>
-                                <p class="mt-1">Phạm vi admin: <?= clean(admin_user_permission_summary($editingUser, $permissionOptions) ?? 'Toàn quyền quản trị') ?></p>
-                            <?php endif; ?>
+                    <section id="userMetaInfoBox" class="rounded-[1.5rem] border border-[#edf4ef] bg-[#f8fbf9] p-5 text-sm text-[#4c6a5b]">
+                        <div class="flex flex-col gap-2">
+                            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Thông tin hệ thống</p>
+                            <h3 class="text-lg font-extrabold text-[#102118]">Dấu mốc và tóm tắt quyền</h3>
                         </div>
-
-                        <div class="flex flex-wrap items-center gap-3 pt-2">
-                            <button type="submit" class="inline-flex items-center rounded-full bg-[#102118] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#1f3b2d]">
-                                Lưu thay đổi
-                            </button>
-                            <?php if ($isEditingCurrentUser): ?>
-                                <a href="../profile.php" class="inline-flex items-center rounded-full border border-[#d9e9de] px-5 py-3 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">
-                                    Mở hồ sơ cá nhân
-                                </a>
-                            <?php endif; ?>
+                        <div class="mt-4 grid gap-3 sm:grid-cols-2">
+                            <div class="rounded-2xl border border-[#e2ede5] bg-white px-4 py-4">
+                                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-[#6e8d7b]">Tạo lúc</p>
+                                <p id="userCreatedAtValue" class="mt-2 text-sm font-semibold text-[#102118]"><?= $editingUser ? clean(format_date((string)$editingUser['created_at'], 'd/m/Y H:i')) : '' ?></p>
+                            </div>
+                            <div class="rounded-2xl border border-[#e2ede5] bg-white px-4 py-4">
+                                <p class="text-xs font-semibold uppercase tracking-[0.16em] text-[#6e8d7b]">Cập nhật gần nhất</p>
+                                <p id="userUpdatedAtValue" class="mt-2 text-sm font-semibold text-[#102118]"><?= $editingUser ? clean(format_date((string)$editingUser['updated_at'], 'd/m/Y H:i')) : '' ?></p>
+                            </div>
                         </div>
-                    </form>
-                <?php else: ?>
-                    <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Chi tiết user</p>
-                    <h2 class="mt-2 text-2xl font-extrabold text-[#102118]">Chọn một tài khoản để chỉnh sửa</h2>
-                    <p class="mt-2 text-sm text-[#6e8d7b]">
-                        Từ danh sách bên trái, bấm “Chỉnh sửa” để cập nhật vai trò, trạng thái hoặc thông tin liên hệ của user.
-                    </p>
+                        <div id="userPermissionSummaryRow" class="mt-4 rounded-2xl border border-[#e2ede5] bg-white px-4 py-4 <?= $editingUser && ($formData['role'] ?? 'user') === 'admin' ? '' : 'hidden' ?>">
+                            <p class="text-xs font-semibold uppercase tracking-[0.16em] text-[#6e8d7b]">Phạm vi admin</p>
+                            <p id="userPermissionSummaryValue" class="mt-2 text-sm font-semibold text-[#102118]"><?= clean($initialUserPermissionSummary ?? '') ?></p>
+                        </div>
+                    </section>
 
-                    <div class="mt-6 rounded-[1.5rem] border border-dashed border-[#d9e9de] bg-[#f8fbf9] px-5 py-8 text-sm leading-6 text-[#5f7b6c]">
-                        Trang này ưu tiên quản lý tài khoản hiện có trong hệ thống. Để tạo user mới, người dùng có thể đăng ký ở trang công khai, sau đó admin quay lại đây để phân quyền hoặc khóa/mở tài khoản khi cần.
+                    <div class="flex flex-wrap items-center gap-3 pt-2">
+                        <button id="userFormSubmitButton" type="submit" class="inline-flex items-center rounded-full bg-[#102118] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#1f3b2d]">
+                            Lưu thay đổi
+                        </button>
+                        <a id="userProfileLink" href="../profile.php" class="inline-flex items-center rounded-full border border-[#d9e9de] px-5 py-3 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63] <?= $isEditingCurrentUser ? '' : 'hidden' ?>">
+                            Mở hồ sơ cá nhân
+                        </a>
                     </div>
-                <?php endif; ?>
+                </form>
             </article>
 
             <article class="rounded-[1.75rem] border border-[#d9e9de] bg-[#102118] p-6 text-white shadow-sm">
@@ -628,10 +715,76 @@ render_admin_header('Quản lý user');
 </div>
 
 <script>
+const userFormCard = document.getElementById('userFormCard');
+const userAdminForm = document.getElementById('userAdminForm');
+const userFormModeLabel = document.getElementById('userFormModeLabel');
+const userFormTitle = document.getElementById('userFormTitle');
+const userFormDescription = document.getElementById('userFormDescription');
+const userIdInput = document.getElementById('userIdInput');
+const resetUserFormButton = document.getElementById('resetUserFormButton');
+const userFormEmptyState = document.getElementById('userFormEmptyState');
+const userGeneralErrorBanner = document.getElementById('userGeneralErrorBanner');
+const currentUserRestrictionsNotice = document.getElementById('currentUserRestrictionsNotice');
+const userRoleHiddenInput = document.getElementById('userRoleHiddenInput');
+const userStatusHiddenInput = document.getElementById('userStatusHiddenInput');
+const userMetaInfoBox = document.getElementById('userMetaInfoBox');
+const userCreatedAtValue = document.getElementById('userCreatedAtValue');
+const userUpdatedAtValue = document.getElementById('userUpdatedAtValue');
+const userPermissionSummaryRow = document.getElementById('userPermissionSummaryRow');
+const userPermissionSummaryValue = document.getElementById('userPermissionSummaryValue');
+const userProfileLink = document.getElementById('userProfileLink');
 const adminRoleSelect = document.getElementById('role_form');
+const adminStatusSelect = document.getElementById('status_form');
 const adminPermissionsPanel = document.getElementById('admin_permissions_panel');
-const fullAccessCheckbox = document.querySelector('input[name="admin_permissions[]"][value="admin.full_access"]');
-const granularPermissionCheckboxes = Array.from(document.querySelectorAll('input[name="admin_permissions[]"]')).filter((input) => input.value !== 'admin.full_access');
+const adminPermissionCheckboxes = Array.from(document.querySelectorAll('[data-admin-permission-checkbox]'));
+const fullAccessCheckbox = adminPermissionCheckboxes.find((input) => input.value === 'admin.full_access') || null;
+const granularPermissionCheckboxes = adminPermissionCheckboxes.filter((input) => input.value !== 'admin.full_access');
+const adminPermissionsHiddenInputs = document.getElementById('adminPermissionsHiddenInputs');
+const defaultUserFormState = <?= json_encode($defaultUserFormState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+const initialUserFormState = <?= json_encode($initialUserFormState, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+const userListStateUrl = <?= json_encode($userListStateUrl, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>;
+let userPermissionsLocked = Boolean(initialUserFormState.id && initialUserFormState.is_current_user);
+
+const syncLockedField = (field, hiddenField, locked, fieldName) => {
+    if (!field || !hiddenField) {
+        return;
+    }
+
+    if (locked) {
+        field.disabled = true;
+        field.name = `${fieldName}_display`;
+        hiddenField.name = fieldName;
+        hiddenField.value = field.value;
+        return;
+    }
+
+    field.disabled = false;
+    field.name = fieldName;
+    hiddenField.name = '';
+    hiddenField.value = '';
+};
+
+const syncAdminPermissionHiddenInputs = () => {
+    if (!adminPermissionsHiddenInputs) {
+        return;
+    }
+
+    adminPermissionsHiddenInputs.innerHTML = '';
+
+    if (!userPermissionsLocked) {
+        return;
+    }
+
+    adminPermissionCheckboxes
+        .filter((input) => input.checked)
+        .forEach((input) => {
+            const hiddenInput = document.createElement('input');
+            hiddenInput.type = 'hidden';
+            hiddenInput.name = 'admin_permissions[]';
+            hiddenInput.value = input.value;
+            adminPermissionsHiddenInputs.appendChild(hiddenInput);
+        });
+};
 
 const syncAdminPermissionsPanel = () => {
     if (!adminRoleSelect || !adminPermissionsPanel) {
@@ -642,21 +795,132 @@ const syncAdminPermissionsPanel = () => {
 };
 
 const syncAdminPermissionCheckboxes = () => {
-    if (!fullAccessCheckbox) {
+    if (userPermissionsLocked) {
+        adminPermissionCheckboxes.forEach((input) => {
+            input.disabled = true;
+        });
+        syncAdminPermissionHiddenInputs();
         return;
     }
 
-    const hasFullAccess = fullAccessCheckbox.checked;
-    granularPermissionCheckboxes.forEach((input) => {
-        input.disabled = hasFullAccess;
-        if (hasFullAccess) {
-            input.checked = false;
+    if (fullAccessCheckbox) {
+        const hasFullAccess = fullAccessCheckbox.checked;
+        granularPermissionCheckboxes.forEach((input) => {
+            input.disabled = hasFullAccess;
+            if (hasFullAccess) {
+                input.checked = false;
+            }
+        });
+    }
+
+    syncAdminPermissionHiddenInputs();
+};
+
+const populateUserForm = (state, { updateHistory = true } = {}) => {
+    if (!userAdminForm) {
+        return;
+    }
+
+    const normalizedState = {
+        ...defaultUserFormState,
+        ...state,
+        admin_permissions: Array.isArray(state?.admin_permissions) ? state.admin_permissions : [],
+    };
+    const isEditMode = Boolean(normalizedState.id);
+    userPermissionsLocked = Boolean(isEditMode && normalizedState.is_current_user);
+
+    if (userGeneralErrorBanner) {
+        userGeneralErrorBanner.classList.add('hidden');
+    }
+
+    userFormModeLabel.textContent = isEditMode ? 'Chỉnh sửa user' : 'Chi tiết user';
+    userFormTitle.textContent = isEditMode
+        ? (normalizedState.display_name || normalizedState.username || 'Cập nhật tài khoản')
+        : 'Chọn một tài khoản để chỉnh sửa';
+    userFormDescription.textContent = isEditMode
+        ? 'Cập nhật thông tin liên hệ, vai trò và trạng thái truy cập cho tài khoản này.'
+        : 'Từ danh sách bên trái, bấm “Chỉnh sửa” để cập nhật vai trò, trạng thái hoặc thông tin liên hệ của user.';
+
+    resetUserFormButton?.classList.toggle('hidden', !isEditMode);
+    userFormEmptyState?.classList.toggle('hidden', isEditMode);
+    userAdminForm.classList.toggle('hidden', !isEditMode);
+    currentUserRestrictionsNotice?.classList.toggle('hidden', !userPermissionsLocked);
+    userMetaInfoBox?.classList.toggle('hidden', !isEditMode);
+
+    if (userIdInput) {
+        userIdInput.value = isEditMode ? String(normalizedState.id) : '';
+    }
+
+    ['full_name', 'username', 'email', 'phone'].forEach((fieldName) => {
+        const field = userAdminForm.elements.namedItem(fieldName);
+        if (field) {
+            field.value = normalizedState[fieldName] ?? '';
         }
     });
+
+    if (adminRoleSelect) {
+        adminRoleSelect.value = normalizedState.role || 'user';
+    }
+
+    if (adminStatusSelect) {
+        adminStatusSelect.value = normalizedState.status || 'active';
+    }
+
+    syncLockedField(adminRoleSelect, userRoleHiddenInput, userPermissionsLocked, 'role');
+    syncLockedField(adminStatusSelect, userStatusHiddenInput, userPermissionsLocked, 'status');
+
+    adminPermissionCheckboxes.forEach((input) => {
+        input.checked = normalizedState.role === 'admin' && normalizedState.admin_permissions.includes(input.value);
+    });
+
+    syncAdminPermissionsPanel();
+    syncAdminPermissionCheckboxes();
+
+    if (userCreatedAtValue) {
+        userCreatedAtValue.textContent = normalizedState.created_at || '';
+    }
+
+    if (userUpdatedAtValue) {
+        userUpdatedAtValue.textContent = normalizedState.updated_at || '';
+    }
+
+    if (userPermissionSummaryValue) {
+        userPermissionSummaryValue.textContent = normalizedState.permission_summary || '';
+    }
+
+    userPermissionSummaryRow?.classList.toggle('hidden', !(isEditMode && normalizedState.role === 'admin' && normalizedState.permission_summary));
+
+    if (userProfileLink) {
+        userProfileLink.classList.toggle('hidden', !userPermissionsLocked);
+        userProfileLink.href = normalizedState.profile_url || '../profile.php';
+    }
+
+    if (updateHistory) {
+        const separator = userListStateUrl.includes('?') ? '&' : '?';
+        const nextUrl = isEditMode
+            ? `${userListStateUrl}${separator}edit=${encodeURIComponent(String(normalizedState.id))}`
+            : userListStateUrl;
+        window.history.pushState({ userState: normalizedState }, '', nextUrl);
+    }
+
+    userFormCard?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
+
+document.querySelectorAll('[data-edit-user]').forEach((button) => {
+    button.addEventListener('click', () => {
+        const userState = JSON.parse(button.dataset.editUser || '{}');
+        populateUserForm(userState, { updateHistory: true });
+    });
+});
 
 adminRoleSelect?.addEventListener('change', syncAdminPermissionsPanel);
 fullAccessCheckbox?.addEventListener('change', syncAdminPermissionCheckboxes);
+resetUserFormButton?.addEventListener('click', () => {
+    populateUserForm(defaultUserFormState, { updateHistory: true });
+});
+window.addEventListener('popstate', (event) => {
+    populateUserForm(event.state?.userState || initialUserFormState || defaultUserFormState, { updateHistory: false });
+});
 syncAdminPermissionsPanel();
 syncAdminPermissionCheckboxes();
 </script>

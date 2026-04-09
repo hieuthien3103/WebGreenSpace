@@ -48,8 +48,7 @@ function order_detail_payment_method_label(string $method): string {
 }
 
 function order_detail_qr_payment_token(int $orderId, int $userId, string $orderNumber): string {
-    $secret = (string)(DB_PASS ?: APP_NAME);
-    return hash_hmac('sha256', $orderId . '|' . $userId . '|' . $orderNumber, $secret);
+    return build_qr_payment_token($orderId, $userId, $orderNumber);
 }
 
 $orderId = max(0, (int)($id ?? ($_GET['id'] ?? 0)));
@@ -75,9 +74,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') ==
 
     $isOnlineMockOrder = (string)$order['payment_method'] === 'online_mock';
     $isUnpaidOrder = (string)$order['payment_status'] === 'unpaid';
+    $isCancelledOrder = (string)$order['order_status'] === 'cancelled';
 
     if (!$isOnlineMockOrder) {
         set_flash('error', 'Đơn hàng này không sử dụng chuyển khoản giả lập.');
+        redirect('order-detail.php?id=' . urlencode((string)$orderId) . '#payment-confirmation');
+    }
+
+    if ($isCancelledOrder) {
+        set_flash('error', 'Đơn hàng đã bị hủy nên không thể xác nhận thanh toán nữa.');
         redirect('order-detail.php?id=' . urlencode((string)$orderId) . '#payment-confirmation');
     }
 
@@ -115,9 +120,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') ==
 
     $isOnlineMockOrder = (string)$order['payment_method'] === 'online_mock';
     $isRejectedOrder = (string)$order['payment_status'] === 'failed';
+    $isCancelledOrder = (string)$order['order_status'] === 'cancelled';
 
     if (!$isOnlineMockOrder) {
         set_flash('error', 'Đơn hàng này không sử dụng chuyển khoản giả lập.');
+        redirect('order-detail.php?id=' . urlencode((string)$orderId) . '#payment-confirmation');
+    }
+
+    if ($isCancelledOrder) {
+        set_flash('error', 'Đơn hàng đã bị hủy nên không thể gửi lại yêu cầu thanh toán.');
         redirect('order-detail.php?id=' . urlencode((string)$orderId) . '#payment-confirmation');
     }
 
@@ -143,8 +154,9 @@ $paymentStatus = order_detail_payment_status_meta((string)$order['payment_status
 $payment = $order['payment'] ?? null;
 $orderItems = $order['items'] ?? [];
 $isOnlineMockOrder = (string)$order['payment_method'] === 'online_mock';
-$canConfirmMockPayment = $isOnlineMockOrder && (string)$order['payment_status'] === 'unpaid';
-$canResubmitMockPayment = $isOnlineMockOrder && (string)$order['payment_status'] === 'failed';
+$isCancelledOrder = (string)$order['order_status'] === 'cancelled';
+$canConfirmMockPayment = $isOnlineMockOrder && !$isCancelledOrder && (string)$order['payment_status'] === 'unpaid';
+$canResubmitMockPayment = $isOnlineMockOrder && !$isCancelledOrder && (string)$order['payment_status'] === 'failed';
 $mockBankName = 'GreenSpace Virtual Bank';
 $mockAccountNumber = '1021182026';
 $mockAccountName = 'CONG TY GREENSPACE DEMO';

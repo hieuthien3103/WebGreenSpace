@@ -376,7 +376,13 @@ render_admin_header('Quản lý đơn hàng');
                 <?php
                 $viewPaymentMeta = admin_order_payment_status_meta((string)$viewOrder['payment_status']);
                 $viewOrderMeta = admin_order_status_meta((string)$viewOrder['order_status']);
-                $canReviewPayment = (string)$viewOrder['payment_method'] === 'online_mock' && (string)$viewOrder['payment_status'] === 'pending_review';
+                $isCancelledOrder = (string)$viewOrder['order_status'] === 'cancelled';
+                $canReviewPayment = (string)$viewOrder['payment_method'] === 'online_mock'
+                    && !$isCancelledOrder
+                    && (string)$viewOrder['payment_status'] === 'pending_review';
+                $orderStatusLockedByPayment = (string)$viewOrder['payment_method'] === 'online_mock'
+                    && (string)$viewOrder['payment_status'] !== 'paid';
+                $currentOrderStatus = (string)$viewOrder['order_status'];
                 ?>
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div>
@@ -433,9 +439,17 @@ render_admin_header('Quản lý đơn hàng');
                             <select id="next_status" name="next_status" class="w-full rounded-2xl border border-[#d9e9de] px-4 py-3 text-sm text-[#102118] focus:border-[#2e9b63] focus:ring-[#2e9b63]">
                                 <?php foreach (admin_order_status_options() as $value => $label): ?>
                                     <?php if ($value === 'all') { continue; } ?>
-                                    <option value="<?= clean($value) ?>" <?= (string)$viewOrder['order_status'] === $value ? 'selected' : '' ?>><?= clean($label) ?></option>
+                                    <?php
+                                    $optionLockedByPayment = $orderStatusLockedByPayment
+                                        && $value !== 'cancelled'
+                                        && $value !== $currentOrderStatus;
+                                    ?>
+                                    <option value="<?= clean($value) ?>" <?= $currentOrderStatus === $value ? 'selected' : '' ?> <?= $optionLockedByPayment ? 'disabled' : '' ?>><?= clean($label) ?></option>
                                 <?php endforeach; ?>
                             </select>
+                            <?php if ($orderStatusLockedByPayment): ?>
+                                <p class="text-xs text-[#b7791f]">Đơn chuyển khoản giả lập chưa được duyệt thanh toán chỉ nên giữ nguyên trạng thái hiện tại hoặc chuyển sang "Đã hủy" để đóng đơn và hoàn kho.</p>
+                            <?php endif; ?>
                         </div>
                         <button type="submit" class="inline-flex items-center justify-center rounded-2xl bg-[#102118] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#1f3b2d]">
                             Cập nhật trạng thái

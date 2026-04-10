@@ -92,6 +92,9 @@ spl_autoload_register(function ($class) {
         APP_PATH . '/controllers/' . $class . '.php',
         APP_PATH . '/models/' . $class . '.php',
         APP_PATH . '/services/' . $class . '.php',
+        APP_PATH . '/dto/' . $class . '.php',
+        APP_PATH . '/presenters/' . $class . '.php',
+        APP_PATH . '/routing/' . $class . '.php',
         CONFIG_PATH . '/' . $class . '.php',
         BASE_PATH . '/helpers/' . $class . '.php',
     ];

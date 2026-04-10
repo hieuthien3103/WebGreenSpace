@@ -3,23 +3,17 @@
  * Home Controller
  */
 class HomeController extends Controller {
-    private HomeService $homeService;
+    private HomePresenter $homePresenter;
 
-    public function __construct(?Request $request = null, ?HomeService $homeService = null) {
+    public function __construct(?Request $request = null, ?HomePresenter $homePresenter = null) {
         parent::__construct($request);
-        $this->homeService = $homeService ?? new HomeService();
+        $this->homePresenter = $homePresenter ?? new HomePresenter();
     }
 
     /**
      * Display homepage
      */
-    public function index(): void {
-        $this->render('storefront/home/index', array_merge(
-            [
-                'pageTitle' => 'Trang chủ - GreenSpace',
-                'currentPage' => 'home',
-            ],
-            $this->homeService->getHomepageData()
-        ));
+    public function index(): ViewResponse {
+        return $this->view('storefront/home/index', $this->homePresenter->presentIndex());
     }
 }

@@ -1,10 +1,11 @@
 <?php
-require_once __DIR__ . '/bootstrap.php';
-require_admin_permission('products.manage', 'check_images.php');
-require_once __DIR__ . '/../../app/models/Product.php';
+if (empty($GLOBALS['mvc_template_rendering'])) {
+    require_once __DIR__ . '/../../config/config.php';
+    (new AdminToolController())->checkImages()->send();
+    return;
+}
 
-$productModel = new Product();
-$products = $productModel->getAll(8, 0);
+require_once __DIR__ . '/bootstrap.php';
 
 render_admin_header('Kiểm tra ảnh sản phẩm');
 ?>

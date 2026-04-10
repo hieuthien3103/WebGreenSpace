@@ -4,7 +4,6 @@
  */
 
 class Address {
-class Address {
     private PDO $conn;
     private string $table = 'addresses';
 

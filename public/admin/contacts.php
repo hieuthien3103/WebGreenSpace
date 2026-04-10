@@ -1,6 +1,11 @@
 <?php
+if (empty($GLOBALS['mvc_template_rendering'])) {
+    require_once __DIR__ . '/../../config/config.php';
+    (new AdminPageController())->contacts()->send();
+    return;
+}
+
 require_once __DIR__ . '/bootstrap.php';
-require_admin_permission('contacts.manage', 'contacts.php');
 
 function admin_contacts_query(array $params): string {
     $filtered = [];
@@ -42,95 +47,6 @@ function admin_contact_status_meta(string $status): array {
         default => ['label' => 'Mới', 'class' => 'bg-[#fff7e8] text-[#b7791f]'],
     };
 }
-
-$contactModel = new ContactMessage();
-$statusOptions = [
-    'all' => 'Tất cả trạng thái',
-    'new' => 'Mới',
-    'in_progress' => 'Đang xử lý',
-    'resolved' => 'Đã xử lý',
-];
-
-$search = trim((string)($_GET['q'] ?? ''));
-$statusFilter = (string)($_GET['status'] ?? 'all');
-$page = max(1, (int)($_GET['page'] ?? 1));
-$viewId = max(0, (int)($_GET['view'] ?? 0));
-$perPage = 12;
-
-if (!isset($statusOptions[$statusFilter])) {
-    $statusFilter = 'all';
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $returnState = [
-        'q' => trim((string)($_POST['q'] ?? '')),
-        'status' => (string)($_POST['status'] ?? 'all'),
-        'page' => max(1, (int)($_POST['page'] ?? 1)),
-        'view' => max(0, (int)($_POST['view'] ?? 0)),
-    ];
-
-    if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
-        set_flash('error', 'Phiên làm việc đã hết hạn. Vui lòng thử lại.');
-        redirect('contacts.php' . admin_contacts_query($returnState));
-    }
-
-    $action = (string)($_POST['action'] ?? '');
-    $targetId = max(0, (int)($_POST['contact_id'] ?? 0));
-    if ($targetId > 0) {
-        $returnState['view'] = $targetId;
-    }
-
-    if ($action === 'update_contact_status') {
-        $nextStatus = (string)($_POST['next_status'] ?? 'new');
-        $adminNote = trim((string)($_POST['admin_note'] ?? ''));
-
-        if (!in_array($nextStatus, ['new', 'in_progress', 'resolved'], true)) {
-            set_flash('error', 'Trạng thái liên hệ không hợp lệ.');
-            redirect('contacts.php' . admin_contacts_query($returnState) . '#contact-detail');
-        }
-
-        $updated = $targetId > 0 ? $contactModel->updateAdminState($targetId, $nextStatus, $adminNote) : false;
-        if ($updated) {
-            set_flash('success', 'Đã cập nhật trạng thái và ghi chú xử lý liên hệ.');
-        } else {
-            set_flash('error', 'Không thể cập nhật liên hệ lúc này.');
-        }
-
-        redirect('contacts.php' . admin_contacts_query($returnState) . '#contact-detail');
-    }
-}
-
-$stats = $contactModel->getStats();
-$totalMessages = $contactModel->getAdminTotal($search, $statusFilter);
-$totalPages = max(1, (int)ceil($totalMessages / $perPage));
-$page = min($page, $totalPages);
-$offset = ($page - 1) * $perPage;
-$messages = $contactModel->getAdminList($search, $statusFilter, $perPage, $offset);
-
-$viewMessage = null;
-if ($viewId > 0) {
-    $viewMessage = $contactModel->findById($viewId);
-    if (!$viewMessage) {
-        set_flash('error', 'Không tìm thấy liên hệ cần xem.');
-        redirect('contacts.php' . admin_contacts_query([
-            'q' => $search,
-            'status' => $statusFilter,
-            'page' => $page,
-        ]));
-    }
-
-    if (empty($viewMessage['is_read'])) {
-        $contactModel->markAsRead($viewId);
-        $viewMessage['is_read'] = 1;
-    }
-}
-
-$currentState = [
-    'q' => $search,
-    'status' => $statusFilter,
-    'page' => $page,
-    'view' => $viewId,
-];
 
 render_admin_header('Liên hệ khách hàng');
 ?>

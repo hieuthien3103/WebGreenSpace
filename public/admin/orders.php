@@ -1,6 +1,11 @@
 <?php
+if (empty($GLOBALS['mvc_template_rendering'])) {
+    require_once __DIR__ . '/../../config/config.php';
+    (new AdminPageController())->orders()->send();
+    return;
+}
+
 require_once __DIR__ . '/bootstrap.php';
-require_admin_permission('orders.manage', 'orders.php');
 
 function admin_orders_query(array $params): string {
     $filtered = [];
@@ -77,135 +82,6 @@ function admin_payment_status_options(): array {
         'failed' => 'Thanh toán lỗi',
     ];
 }
-
-$orderModel = new Order();
-$dashboardService = new AdminDashboardService();
-$commerceInsights = $dashboardService->getCommerceInsights();
-$commerceTrends = $dashboardService->getCommerceTrendData();
-$commerceSummary = $commerceInsights['commerce_summary'] ?? [];
-$topCustomers = $commerceInsights['top_customers'] ?? [];
-$topProducts = $commerceInsights['top_products'] ?? [];
-
-if (($_GET['ajax'] ?? '') === 'pending_count') {
-    header('Content-Type: application/json; charset=UTF-8');
-    echo json_encode([
-        'pending_count' => $orderModel->countAdminOnlineMockOrdersByPaymentStatus('pending_review'),
-    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    exit();
-}
-
-$orderStatusOptions = admin_order_status_options();
-$paymentStatusOptions = admin_payment_status_options();
-
-$search = trim((string)($_GET['q'] ?? ''));
-$orderStatusFilter = (string)($_GET['order_status'] ?? 'all');
-$paymentStatusFilter = (string)($_GET['payment_status'] ?? 'all');
-$page = max(1, (int)($_GET['page'] ?? 1));
-$viewId = max(0, (int)($_GET['view'] ?? 0));
-$perPage = 12;
-
-if (!isset($orderStatusOptions[$orderStatusFilter])) {
-    $orderStatusFilter = 'all';
-}
-
-if (!isset($paymentStatusOptions[$paymentStatusFilter])) {
-    $paymentStatusFilter = 'all';
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $returnState = [
-        'q' => trim((string)($_POST['q'] ?? '')),
-        'order_status' => (string)($_POST['order_status'] ?? 'all'),
-        'payment_status' => (string)($_POST['payment_status'] ?? 'all'),
-        'page' => max(1, (int)($_POST['page'] ?? 1)),
-        'view' => max(0, (int)($_POST['view'] ?? 0)),
-    ];
-
-    if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
-        set_flash('error', 'Phiên làm việc đã hết hạn. Vui lòng thử lại.');
-        redirect('orders.php' . admin_orders_query($returnState));
-    }
-
-    $action = (string)($_POST['action'] ?? '');
-    $targetOrderId = max(0, (int)($_POST['order_id'] ?? 0));
-    if ($targetOrderId > 0) {
-        $returnState['view'] = $targetOrderId;
-    }
-
-    if ($action === 'update_order_status') {
-        $nextStatus = (string)($_POST['next_status'] ?? '');
-        $updated = $targetOrderId > 0 ? $orderModel->updateAdminOrderStatus($targetOrderId, $nextStatus) : false;
-
-        if ($updated) {
-            $statusMeta = admin_order_status_meta($nextStatus);
-            set_flash('success', 'Đã cập nhật trạng thái đơn hàng sang "' . $statusMeta['label'] . '".');
-        } else {
-            set_flash('error', $orderModel->getLastErrorMessage() ?? 'Không thể cập nhật trạng thái đơn hàng lúc này.');
-        }
-
-        redirect('orders.php' . admin_orders_query($returnState) . '#order-detail');
-    }
-
-    if ($action === 'approve_online_mock_payment') {
-        $approved = $targetOrderId > 0 ? $orderModel->approveOnlineMockPaymentByAdmin($targetOrderId) : false;
-
-        if ($approved) {
-            set_flash('success', 'Đã duyệt chuyển khoản giả lập và cập nhật trạng thái thanh toán.');
-        } else {
-            set_flash('error', $orderModel->getLastErrorMessage() ?? 'Không thể duyệt thanh toán lúc này.');
-        }
-
-        redirect('orders.php' . admin_orders_query($returnState) . '#order-detail');
-    }
-
-    if ($action === 'reject_online_mock_payment') {
-        $reason = trim((string)($_POST['reject_reason'] ?? ''));
-
-        if ($reason === '') {
-            set_flash('error', 'Vui lòng nhập lý do từ chối duyệt.');
-            redirect('orders.php' . admin_orders_query($returnState) . '#order-detail');
-        }
-
-        $rejected = $targetOrderId > 0 ? $orderModel->rejectOnlineMockPaymentByAdmin($targetOrderId, $reason) : false;
-
-        if ($rejected) {
-            set_flash('success', 'Đã từ chối yêu cầu chuyển khoản giả lập.');
-        } else {
-            set_flash('error', $orderModel->getLastErrorMessage() ?? 'Không thể từ chối thanh toán lúc này.');
-        }
-
-        redirect('orders.php' . admin_orders_query($returnState) . '#order-detail');
-    }
-}
-
-$stats = $orderModel->getAdminStats();
-$totalOrders = $orderModel->getAdminTotal($search, $orderStatusFilter, $paymentStatusFilter);
-$totalPages = max(1, (int)ceil($totalOrders / $perPage));
-$page = min($page, $totalPages);
-$offset = ($page - 1) * $perPage;
-$orders = $orderModel->getAdminList($search, $orderStatusFilter, $paymentStatusFilter, $perPage, $offset);
-
-$viewOrder = null;
-if ($viewId > 0) {
-    $viewOrder = $orderModel->getAdminDetailById($viewId);
-    if (!$viewOrder) {
-        set_flash('error', 'Không tìm thấy đơn hàng cần xem chi tiết.');
-        redirect('orders.php' . admin_orders_query([
-            'q' => $search,
-            'order_status' => $orderStatusFilter,
-            'payment_status' => $paymentStatusFilter,
-            'page' => $page,
-        ]));
-    }
-}
-
-$currentState = [
-    'q' => $search,
-    'order_status' => $orderStatusFilter,
-    'payment_status' => $paymentStatusFilter,
-    'page' => $page,
-    'view' => $viewId,
-];
 
 render_admin_header('Quản lý đơn hàng');
 ?>

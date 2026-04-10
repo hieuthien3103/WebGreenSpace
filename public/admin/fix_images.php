@@ -1,49 +1,11 @@
 <?php
-require_once __DIR__ . '/bootstrap.php';
-require_admin_permission('products.manage', 'fix_images.php');
-
-$db = new Database();
-$conn = $db->getConnection();
-
-$stmt = $conn->query("SELECT id, name, image FROM products");
-$products = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-$updateStmt = $conn->prepare("UPDATE products SET image = :image WHERE id = :id");
-$results = [];
-
-foreach ($products as $product) {
-    $oldPath = (string)($product['image'] ?? '');
-    $newPath = str_replace('"', '', $oldPath);
-    $newPath = basename($newPath);
-
-    if ($newPath !== '' && strpos($newPath, 'products/') !== 0) {
-        $newPath = 'products/' . $newPath;
-    }
-
-    try {
-        $updateStmt->execute([
-            ':image' => $newPath !== '' ? $newPath : null,
-            ':id' => (int)$product['id'],
-        ]);
-
-        $results[] = [
-            'id' => $product['id'],
-            'name' => $product['name'],
-            'old' => $oldPath,
-            'new' => $newPath,
-            'status' => 'success',
-        ];
-    } catch (Throwable $e) {
-        $results[] = [
-            'id' => $product['id'],
-            'name' => $product['name'],
-            'old' => $oldPath,
-            'new' => $newPath,
-            'status' => 'error',
-            'error' => $e->getMessage(),
-        ];
-    }
+if (empty($GLOBALS['mvc_template_rendering'])) {
+    require_once __DIR__ . '/../../config/config.php';
+    (new AdminToolController())->fixImages()->send();
+    return;
 }
+
+require_once __DIR__ . '/bootstrap.php';
 
 render_admin_header('Fix đường dẫn ảnh');
 ?>

@@ -1,17 +1,11 @@
 <?php
-require_once __DIR__ . '/bootstrap.php';
+if (empty($GLOBALS['mvc_template_rendering'])) {
+    require_once __DIR__ . '/../../config/config.php';
+    (new AdminPageController())->dashboard()->send();
+    return;
+}
 
-$dashboardService = new AdminDashboardService();
-$dashboard = $dashboardService->getDashboardData();
-$stats = $dashboard['stats'];
-$commerceSummary = $dashboard['commerce_summary'] ?? [];
-$categorySummary = $dashboard['category_summary'];
-$recentOrders = $dashboard['recent_orders'];
-$recentUsers = $dashboard['recent_users'];
-$topCustomers = $dashboard['top_customers'] ?? [];
-$topCategories = $dashboard['top_categories'];
-$topProducts = $dashboard['top_products'];
-$lowStockProducts = $dashboard['low_stock_products'];
+require_once __DIR__ . '/bootstrap.php';
 
 render_admin_header('Dashboard');
 ?>

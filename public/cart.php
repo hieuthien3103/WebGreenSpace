@@ -1,91 +1,11 @@
 <?php
+if (empty($GLOBALS['mvc_template_rendering'])) {
+    require_once __DIR__ . '/../config/config.php';
+    (new CartController())->index()->send();
+    return;
+}
+
 require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../config/database.php';
-
-function cart_json_response(array $payload, int $statusCode = 200): never {
-    http_response_code($statusCode);
-    header('Content-Type: application/json; charset=UTF-8');
-    echo json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    exit();
-}
-
-$cartService = new CartService();
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $isAjaxRequest = (
-        strtolower((string)($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest'
-        || (string)($_POST['ajax'] ?? '0') === '1'
-    );
-    $redirectTarget = safe_redirect_target($_POST['redirect_to'] ?? 'cart.php', 'cart.php');
-
-    if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
-        if ($isAjaxRequest) {
-            cart_json_response([
-                'success' => false,
-                'message' => 'Phiên làm việc đã hết hạn. Vui lòng tải lại trang.',
-                'cart_count' => cart_item_count(),
-            ], 419);
-        }
-
-        set_flash('error', 'Phiên làm việc đã hết hạn. Vui lòng thử lại.');
-        redirect($redirectTarget);
-    }
-
-    $action = (string)($_POST['action'] ?? '');
-    $result = ['success' => true, 'message' => 'Đã cập nhật giỏ hàng.'];
-
-    switch ($action) {
-        case 'add':
-            $result = $cartService->addItem((int)($_POST['product_id'] ?? 0), (int)($_POST['quantity'] ?? 1));
-            if (!$isAjaxRequest) {
-                set_flash($result['success'] ? 'success' : 'error', $result['message']);
-            }
-            break;
-
-        case 'update':
-            $cartService->updateItems((array)($_POST['quantities'] ?? []));
-            $result = ['success' => true, 'message' => 'Đã cập nhật giỏ hàng.'];
-            set_flash('success', 'Đã cập nhật giỏ hàng.');
-            $redirectTarget = 'cart.php';
-            break;
-
-        case 'remove':
-            $cartService->removeItem((int)($_POST['product_id'] ?? 0));
-            $result = ['success' => true, 'message' => 'Đã xóa sản phẩm khỏi giỏ.'];
-            set_flash('success', 'Đã xóa sản phẩm khỏi giỏ.');
-            $redirectTarget = 'cart.php';
-            break;
-
-        case 'clear':
-            $cartService->clear();
-            $result = ['success' => true, 'message' => 'Đã xóa toàn bộ giỏ hàng.'];
-            set_flash('success', 'Đã xóa toàn bộ giỏ hàng.');
-            $redirectTarget = 'cart.php';
-            break;
-
-        default:
-            $result = ['success' => false, 'message' => 'Hành động không hợp lệ.'];
-            if (!$isAjaxRequest) {
-                set_flash('error', 'Hành động không hợp lệ.');
-            }
-            break;
-    }
-
-    if ($isAjaxRequest) {
-        cart_json_response([
-            'success' => (bool)($result['success'] ?? false),
-            'message' => (string)($result['message'] ?? ''),
-            'cart_count' => cart_item_count(),
-        ], !empty($result['success']) ? 200 : 422);
-    }
-
-    redirect($redirectTarget);
-}
-
-$summary = $cartService->getSummary();
-$items = $summary['items'];
-$pageTitle = 'Giỏ hàng - GreenSpace';
-$currentPage = '';
 
 include 'includes/header.php';
 ?>

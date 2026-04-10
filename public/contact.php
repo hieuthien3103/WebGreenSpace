@@ -1,66 +1,11 @@
 <?php
-require_once __DIR__ . '/../config/config.php';
-
-$contactModel = new ContactMessage();
-$values = [
-    'full_name' => '',
-    'email' => '',
-    'phone' => '',
-    'subject' => '',
-    'message' => '',
-];
-$errors = [];
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $values = [
-        'full_name' => trim((string)($_POST['full_name'] ?? '')),
-        'email' => strtolower(trim((string)($_POST['email'] ?? ''))),
-        'phone' => trim((string)($_POST['phone'] ?? '')),
-        'subject' => trim((string)($_POST['subject'] ?? '')),
-        'message' => trim((string)($_POST['message'] ?? '')),
-    ];
-
-    if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
-        $errors['general'] = 'Phiên làm việc đã hết hạn. Vui lòng thử lại.';
-    }
-
-    if ($values['full_name'] === '') {
-        $errors['full_name'] = 'Vui lòng nhập họ và tên.';
-    } elseif (string_length($values['full_name']) < 2) {
-        $errors['full_name'] = 'Họ và tên cần ít nhất 2 ký tự.';
-    }
-
-    if ($values['email'] === '') {
-        $errors['email'] = 'Vui lòng nhập email.';
-    } elseif (!is_valid_email($values['email'])) {
-        $errors['email'] = 'Email không hợp lệ.';
-    }
-
-    if ($values['phone'] !== '' && !preg_match('/^[0-9+\s().-]{8,20}$/', $values['phone'])) {
-        $errors['phone'] = 'Số điện thoại không hợp lệ.';
-    }
-
-    if ($values['subject'] === '') {
-        $errors['subject'] = 'Vui lòng nhập tiêu đề.';
-    } elseif (string_length($values['subject']) < 4) {
-        $errors['subject'] = 'Tiêu đề cần ít nhất 4 ký tự.';
-    }
-
-    if ($values['message'] === '') {
-        $errors['message'] = 'Vui lòng nhập nội dung.';
-    } elseif (string_length($values['message']) < 20) {
-        $errors['message'] = 'Nội dung cần ít nhất 20 ký tự để admin có thể hỗ trợ tốt hơn.';
-    }
-
-    if ($errors === []) {
-        $contactModel->create($values);
-        set_flash('success', 'GreenSpace đã nhận được tin nhắn của bạn. Admin sẽ xem và phản hồi sớm nhất.');
-        redirect('contact.php');
-    }
+if (empty($GLOBALS['mvc_template_rendering'])) {
+    require_once __DIR__ . '/../config/config.php';
+    (new ContentController())->contact()->send();
+    return;
 }
 
-$pageTitle = 'Liên hệ - GreenSpace';
-$currentPage = 'contact';
+require_once __DIR__ . '/../config/config.php';
 include 'includes/header.php'; 
 ?>
 

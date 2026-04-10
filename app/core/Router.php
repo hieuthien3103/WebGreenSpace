@@ -35,6 +35,14 @@ class Router {
     }
 
     /**
+     * Register a route module.
+     */
+    public function register(RouteRegistrar $registrar): self {
+        $registrar->register($this);
+        return $this;
+    }
+
+    /**
      * Add a route
      *
      * @param string $method HTTP method
@@ -80,11 +88,15 @@ class Router {
             if (preg_match($route['pattern'], $uri, $matches)) {
                 $params = array_filter($matches, 'is_string', ARRAY_FILTER_USE_KEY);
 
-                return $this->executeHandler($route['handler'], $params);
+                $result = $this->executeHandler($route['handler'], $params);
+                if ($result instanceof Response) {
+                    $result->send();
+                }
+
+                return $result;
             }
         }
 
-        http_response_code(404);
         $this->handle404();
         return null;
     }
@@ -101,11 +113,7 @@ class Router {
             [$controllerClass, $method] = $handler;
 
             if (is_string($controllerClass)) {
-                if (!class_exists($controllerClass)) {
-                    throw new RuntimeException("Router: Controller not found: {$controllerClass}");
-                }
-
-                $controller = new $controllerClass();
+                $controller = $this->instantiateClass($controllerClass);
                 return $this->invokeCallable([$controller, (string)$method], $params);
             }
 
@@ -131,6 +139,49 @@ class Router {
         }
 
         return null;
+    }
+
+    /**
+     * Instantiate a class while resolving object dependencies.
+     */
+    private function instantiateClass(string $className): object {
+        if (!class_exists($className)) {
+            throw new RuntimeException("Router: Controller not found: {$className}");
+        }
+
+        $reflection = new ReflectionClass($className);
+        $constructor = $reflection->getConstructor();
+
+        if ($constructor === null || $constructor->getNumberOfParameters() === 0) {
+            return $reflection->newInstance();
+        }
+
+        $arguments = [];
+        foreach ($constructor->getParameters() as $parameter) {
+            $type = $parameter->getType();
+            if ($type instanceof ReflectionNamedType && !$type->isBuiltin()) {
+                $dependency = $type->getName();
+
+                if ($dependency === Request::class) {
+                    $arguments[] = new Request();
+                    continue;
+                }
+
+                if (class_exists($dependency)) {
+                    $arguments[] = $this->instantiateClass($dependency);
+                    continue;
+                }
+            }
+
+            if ($parameter->isDefaultValueAvailable()) {
+                $arguments[] = $parameter->getDefaultValue();
+                continue;
+            }
+
+            $arguments[] = null;
+        }
+
+        return $reflection->newInstanceArgs($arguments);
     }
 
     /**
@@ -184,10 +235,10 @@ class Router {
      * @return void
      */
     private function handle404(): void {
-        View::render('errors/404', [
+        (new ViewResponse('errors/404', [
             'pageTitle' => '404 - Không tìm thấy trang',
             'message' => 'Không tìm thấy trang bạn đang tìm kiếm.',
-        ]);
+        ], 404))->send();
     }
 
     /**

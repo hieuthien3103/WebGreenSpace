@@ -39,12 +39,7 @@ function order_detail_payment_status_meta(string $status): array {
 }
 
 function order_detail_payment_method_label(string $method): string {
-    $map = [
-        'cod' => 'Thanh toán khi nhận hàng',
-        'online_mock' => 'Chuyển khoản giả lập',
-    ];
-
-    return $map[$method] ?? $method;
+    return payment_method_label($method);
 }
 
 function order_detail_qr_payment_token(int $orderId, int $userId, string $orderNumber): string {
@@ -153,7 +148,8 @@ $orderStatus = order_detail_order_status_meta((string)$order['order_status']);
 $paymentStatus = order_detail_payment_status_meta((string)$order['payment_status']);
 $payment = $order['payment'] ?? null;
 $orderItems = $order['items'] ?? [];
-$isOnlineMockOrder = (string)$order['payment_method'] === 'online_mock';
+$paymentMethod = (string)$order['payment_method'];
+$isOnlineMockOrder = payment_method_requires_manual_review($paymentMethod);
 $isCancelledOrder = (string)$order['order_status'] === 'cancelled';
 $canConfirmMockPayment = $isOnlineMockOrder && !$isCancelledOrder && (string)$order['payment_status'] === 'unpaid';
 $canResubmitMockPayment = $isOnlineMockOrder && !$isCancelledOrder && (string)$order['payment_status'] === 'failed';

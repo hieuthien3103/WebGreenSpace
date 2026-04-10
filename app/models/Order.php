@@ -993,13 +993,13 @@ class Order {
             $paymentStatus = (string)($currentOrder['payment_status'] ?? '');
 
             if (
-                $paymentMethod === 'online_mock'
+                payment_method_is_online($paymentMethod)
                 && $paymentStatus !== 'paid'
                 && $nextStatus !== $currentStatus
                 && $nextStatus !== 'cancelled'
             ) {
                 $this->conn->rollBack();
-                $this->lastErrorMessage = 'Đơn chuyển khoản giả lập chỉ được cập nhật sang luồng xử lý sau khi thanh toán đã được admin duyệt là "paid". Nếu cần đóng đơn chưa thanh toán, hãy chuyển sang "cancelled".';
+                $this->lastErrorMessage = 'Đơn thanh toán online chỉ được cập nhật sang luồng xử lý sau khi trạng thái thanh toán là "paid". Nếu cần đóng đơn chưa thanh toán, hãy chuyển sang "cancelled".';
                 return false;
             }
 

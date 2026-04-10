@@ -153,9 +153,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if (!empty($result['success'])) {
                 $orderId = max(0, (int)($result['order_id'] ?? 0));
-                $isOnlineMock = (string)($_POST['payment_method'] ?? '') === 'online_mock';
+                $paymentMethod = (string)($_POST['payment_method'] ?? '');
 
-                if ($isOnlineMock && $orderId > 0) {
+                if (payment_method_requires_manual_review($paymentMethod) && $orderId > 0) {
                     set_flash('success', 'Đơn hàng đã được tạo. Vui lòng xác nhận sau khi bạn hoàn tất chuyển khoản giả lập.');
                     redirect('order-detail.php?id=' . urlencode((string)$orderId) . '#payment-confirmation');
                 }
@@ -187,20 +187,7 @@ foreach ($savedAddresses as $address) {
     ];
 }
 
-$paymentOptions = [
-    [
-        'value' => 'cod',
-        'title' => 'Thanh toán khi nhận hàng',
-        'description' => 'Phù hợp với đơn cần xác nhận thủ công và giao tận nơi.',
-        'icon' => 'local_shipping',
-    ],
-    [
-        'value' => 'online_mock',
-        'title' => 'Chuyển khoản giả lập',
-        'description' => 'Nhận thông tin tài khoản mô phỏng và bấm "Tôi đã thanh toán" sau khi chuyển khoản.',
-        'icon' => 'credit_card',
-    ],
-];
+$paymentOptions = payment_checkout_options();
 
 $pageTitle = 'Thanh toán - GreenSpace';
 $currentPage = '';
@@ -431,10 +418,10 @@ include 'includes/header.php';
                                             </span>
                                             <div class="flex-1">
                                                 <div class="flex flex-wrap items-center justify-between gap-2">
-                                                    <span class="font-bold text-text-main dark:text-white"><?= clean($option['title']) ?></span>
+                                                    <span class="font-bold text-text-main dark:text-white"><?= clean((string)$option['label']) ?></span>
                                                     <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#456a57] shadow-sm">Khả dụng</span>
                                                 </div>
-                                                <p class="mt-2 text-sm leading-6 text-text-secondary"><?= clean($option['description']) ?></p>
+                                                <p class="mt-2 text-sm leading-6 text-text-secondary"><?= clean((string)$option['description']) ?></p>
                                             </div>
                                         </div>
                                     </div>
@@ -500,8 +487,8 @@ include 'includes/header.php';
                         <div class="mt-6 rounded-[1.5rem] bg-[#f6fbf7] px-4 py-4 text-sm text-[#456a57]">
                             <p class="font-semibold text-[#102118]">Lưu ý thanh toán</p>
                             <p class="mt-2 leading-6">
-                                Đơn dưới 500.000đ sẽ cộng thêm 30.000đ phí vận chuyển. Nếu chọn <strong>Chuyển khoản giả lập</strong>,
-                                đơn sẽ ở trạng thái chưa thanh toán đến khi bạn bấm nút xác nhận trên trang chi tiết đơn.
+                                Đơn dưới 500.000đ sẽ cộng thêm 30.000đ phí vận chuyển. Với các phương thức thanh toán online,
+                                đơn sẽ ở trạng thái chưa thanh toán cho đến khi hệ thống nhận xác nhận từ bạn hoặc callback từ cổng thanh toán.
                             </p>
                         </div>
                     </div>

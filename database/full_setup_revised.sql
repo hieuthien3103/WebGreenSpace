@@ -1,6 +1,6 @@
 -- Database: webgreenspace
 -- Full setup bundle: schema + sample data
--- Payment is simulated for coursework: COD + online_mock
+-- Payment demo supports COD + online_mock + MoMo + ZaloPay
 
 CREATE DATABASE IF NOT EXISTS webgreenspace CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE webgreenspace;
@@ -11,6 +11,7 @@ SET FOREIGN_KEY_CHECKS = 0;
 DROP TABLE IF EXISTS inventory_logs;
 DROP TABLE IF EXISTS coupon_usages;
 DROP TABLE IF EXISTS coupons;
+DROP TABLE IF EXISTS contact_messages;
 DROP TABLE IF EXISTS payments;
 DROP TABLE IF EXISTS wishlists;
 DROP TABLE IF EXISTS reviews;
@@ -256,6 +257,26 @@ CREATE TABLE payments (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ========================================
+-- Table: contact_messages
+-- ========================================
+CREATE TABLE contact_messages (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    full_name VARCHAR(120) NOT NULL,
+    email VARCHAR(120) NOT NULL,
+    phone VARCHAR(20) DEFAULT NULL,
+    subject VARCHAR(180) NOT NULL,
+    message TEXT NOT NULL,
+    status ENUM('new', 'in_progress', 'resolved') NOT NULL DEFAULT 'new',
+    is_read TINYINT(1) NOT NULL DEFAULT 0,
+    admin_note TEXT DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    INDEX idx_contact_messages_status (status),
+    INDEX idx_contact_messages_is_read (is_read),
+    INDEX idx_contact_messages_created_at (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========================================
 -- Table: coupons
 -- ========================================
 CREATE TABLE coupons (
@@ -428,6 +449,10 @@ INSERT INTO order_details (order_id, product_id, variant_id, product_name, produ
 INSERT INTO payments (order_id, provider, transaction_code, status, amount, paid_at, note) VALUES
 (1, 'online_mock', 'MOCKTXN001', 'paid', 748200, '2026-03-29 10:30:00', 'Thanh toán mô phỏng thành công'),
 (2, 'cod', NULL, 'unpaid', 310000, NULL, 'Thanh toán khi nhận hàng');
+
+INSERT INTO contact_messages (full_name, email, phone, subject, message, status, is_read, admin_note) VALUES
+('Lê Minh Khôi', 'khoi@example.com', '0909123456', 'Tư vấn cây cho góc làm việc', 'Mình muốn tìm 2-3 loại cây để bàn ít cần ánh sáng, dễ chăm sóc và phù hợp phòng máy lạnh.', 'new', 0, NULL),
+('Nguyễn Thảo Vy', 'thaovy@example.com', '0911222333', 'Báo giá setup cây cho studio', 'Team mình đang cần setup mảng xanh cho studio khoảng 40m2 trong tháng này. Nhờ admin liên hệ để tư vấn giúp.', 'in_progress', 1, 'Đã gọi lại lúc 09:30 và chờ khách gửi layout mặt bằng.');
 
 INSERT INTO coupon_usages (coupon_id, user_id, order_id) VALUES
 (1, 2, 1);

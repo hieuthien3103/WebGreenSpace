@@ -1,98 +1,13 @@
 <?php
-// Load configuration and dependencies
-require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../helpers/functions.php';
-require_once __DIR__ . '/../app/models/Product.php';
-require_once __DIR__ . '/../app/models/Category.php';
-require_once __DIR__ . '/../app/services/ProductService.php';
-
-// Initialize page variables
-$pageTitle = 'Cửa hàng - GreenSpace';
-$currentPage = 'products';
-
-// Get filter parameters from request
-$filters = [
-    'category' => $_GET['category'] ?? '',
-    'search' => $_GET['search'] ?? '',
-    'sort' => $_GET['sort'] ?? ProductService::SORT_NEWEST,
-    'min_price' => isset($_GET['min_price']) && is_numeric($_GET['min_price']) ? (float)$_GET['min_price'] : null,
-    'max_price' => isset($_GET['max_price']) && is_numeric($_GET['max_price']) ? (float)$_GET['max_price'] : null,
-    'page' => max(1, (int)($_GET['page'] ?? 1)),
-    'limit' => 12,
-];
-
-// Sanitize inputs
-$filters = array_map(function ($value) {
-    return is_string($value) ? clean($value) : $value;
-}, $filters);
-
-// Initialize service
-$productService = new ProductService();
-
-// Get products and categories
-$result = $productService->getProducts($filters);
-$products = $result['products'] ?? [];
-$category = $result['category'] ?? null;
-$categories = $productService->getCategories();
-
-// Update page title if viewing category
-if ($category) {
-    $pageTitle = clean($category['name']) . ' - GreenSpace';
-}
-
-// Extract filters for view
-$category_filter = $filters['category'];
-$search = $filters['search'];
-$sort = $result['sort'] ?? $filters['sort'];
-$page = max(1, (int)($result['page'] ?? $filters['page']));
-$limit = max(1, (int)($result['limit'] ?? $filters['limit']));
-$min_price = $filters['min_price'];
-$max_price = $filters['max_price'];
-$totalProducts = max(0, (int)($result['total'] ?? 0));
-$totalPages = max(1, (int)($result['total_pages'] ?? 1));
-$isAjaxRequest = (
-    (isset($_GET['ajax']) && (string) $_GET['ajax'] === '1')
-    || strtolower((string) ($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest'
-);
-
-$buildProductsUrl = static function (int $targetPage) use ($category_filter, $search, $sort, $min_price, $max_price): string {
-    $params = [
-        'page' => $targetPage,
-        'category' => $category_filter,
-        'search' => $search,
-        'sort' => $sort,
-        'min_price' => $min_price,
-        'max_price' => $max_price,
-    ];
-
-    $params = array_filter($params, static function ($value) {
-        return $value !== null && $value !== '';
-    });
-
-    $query = http_build_query($params);
-    return '/products.php' . ($query !== '' ? '?' . $query : '');
-};
-
-if ($isAjaxRequest) {
-    header('Content-Type: text/html; charset=UTF-8');
-    include __DIR__ . '/includes/products-page-content.php';
-    exit;
-}
-
-include 'includes/header.php';
+include __DIR__ . '/../../layouts/header.php';
+include __DIR__ . '/content.php';
 ?>
-
-<!-- Main Content -->
-<main class="flex-1">
-    <?php include __DIR__ . '/includes/products-page-content.php'; ?>
-</main>
 
 <script>
 function handleSort(value) {
     const url = new URL(window.location.href);
     url.searchParams.set('sort', value);
-    url.searchParams.set('page', '1');
+    url.searchParams.delete('page');
 
     if (typeof window.loadProductsPage === 'function') {
         window.loadProductsPage(url.toString(), { pushState: true });
@@ -104,7 +19,7 @@ function handleSort(value) {
 </script>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
     const MIN = 0;
     const MAX = 5000000;
     let activeProductsRequest = null;
@@ -266,7 +181,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     initializeProductsPageControls();
 
-    document.addEventListener('submit', function(event) {
+    document.addEventListener('submit', function (event) {
         const target = event.target;
         if (!(target instanceof HTMLFormElement) || target.dataset.productsSearchForm !== 'true') {
             return;
@@ -291,7 +206,7 @@ document.addEventListener('DOMContentLoaded', function() {
             nextUrl.searchParams.set(key, normalizedValue);
         });
 
-        nextUrl.searchParams.set('page', '1');
+        nextUrl.searchParams.delete('page');
         syncSearchInputs(String(formData.get('search') || '').trim());
 
         loadProductsPage(nextUrl.toString(), {
@@ -300,7 +215,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    document.addEventListener('click', function(event) {
+    document.addEventListener('click', function (event) {
         const ajaxLink = event.target instanceof Element ? event.target.closest('[data-products-ajax-link="true"]') : null;
         if (ajaxLink instanceof HTMLAnchorElement) {
             if (
@@ -351,7 +266,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 url.searchParams.delete('max_price');
             }
 
-            url.searchParams.set('page', '1');
+            url.searchParams.delete('page');
             loadProductsPage(url.toString(), { pushState: true });
             return;
         }
@@ -361,12 +276,12 @@ document.addEventListener('DOMContentLoaded', function() {
             const url = getNormalizedProductsUrl(window.location.href);
             url.searchParams.delete('min_price');
             url.searchParams.delete('max_price');
-            url.searchParams.set('page', '1');
+            url.searchParams.delete('page');
             loadProductsPage(url.toString(), { pushState: true });
         }
     });
 
-    document.addEventListener('input', function(event) {
+    document.addEventListener('input', function (event) {
         if (!(event.target instanceof HTMLInputElement)) {
             return;
         }
@@ -376,7 +291,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    window.addEventListener('popstate', function() {
+    window.addEventListener('popstate', function () {
         if (!getProductsPageContent()) {
             return;
         }
@@ -386,4 +301,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
-<?php include 'includes/footer.php'; ?>
+<?php include __DIR__ . '/../../layouts/footer.php'; ?>

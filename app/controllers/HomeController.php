@@ -2,22 +2,24 @@
 /**
  * Home Controller
  */
+class HomeController extends Controller {
+    private HomeService $homeService;
 
-class HomeController {
-    
+    public function __construct(?Request $request = null, ?HomeService $homeService = null) {
+        parent::__construct($request);
+        $this->homeService = $homeService ?? new HomeService();
+    }
+
     /**
      * Display homepage
      */
-    public function index() {
-        // Get categories for display
-        $categoryModel = new Category();
-        $categories = $categoryModel->getTop(5);
-        
-        // Get best selling products
-        $productModel = new Product();
-        $bestSellers = $productModel->getBestSellers(8);
-        
-        // Load view
-        include APP_PATH . '/views/home/index.php';
+    public function index(): void {
+        $this->render('storefront/home/index', array_merge(
+            [
+                'pageTitle' => 'Trang chủ - GreenSpace',
+                'currentPage' => 'home',
+            ],
+            $this->homeService->getHomepageData()
+        ));
     }
 }

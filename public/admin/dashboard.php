@@ -4,9 +4,11 @@ require_once __DIR__ . '/bootstrap.php';
 $dashboardService = new AdminDashboardService();
 $dashboard = $dashboardService->getDashboardData();
 $stats = $dashboard['stats'];
+$commerceSummary = $dashboard['commerce_summary'] ?? [];
 $categorySummary = $dashboard['category_summary'];
 $recentOrders = $dashboard['recent_orders'];
 $recentUsers = $dashboard['recent_users'];
+$topCustomers = $dashboard['top_customers'] ?? [];
 $topCategories = $dashboard['top_categories'];
 $topProducts = $dashboard['top_products'];
 $lowStockProducts = $dashboard['low_stock_products'];
@@ -33,6 +35,81 @@ render_admin_header('Dashboard');
             </article>
         <?php endforeach; ?>
     </section>
+
+    <?php if (!empty($commerceSummary)): ?>
+        <section class="rounded-[2rem] border border-[#d9e9de] bg-white p-6 shadow-sm">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                    <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Kinh doanh</p>
+                    <h2 class="mt-2 text-2xl font-extrabold text-[#102118]">Thống kê sản phẩm và khách hàng đã mua</h2>
+                    <p class="mt-2 text-sm text-[#6e8d7b]">Tập trung vào sức mua thực tế: bao nhiêu khách đã mua, bao nhiêu sản phẩm đã bán ra và ai đang đóng góp doanh thu nhiều nhất.</p>
+                </div>
+                <a href="orders.php" class="inline-flex items-center rounded-full border border-[#d9e9de] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">
+                    Mở quản lý đơn hàng
+                </a>
+            </div>
+
+            <div class="mt-6 grid gap-6 xl:grid-cols-[1.02fr_0.98fr]">
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <?php foreach ($commerceSummary as $card): ?>
+                        <article class="rounded-[1.5rem] border border-[#edf4ef] bg-[#f8fbf9] p-5">
+                            <div class="flex items-start justify-between gap-4">
+                                <div>
+                                    <p class="text-sm font-semibold text-[#587766]"><?= clean($card['label']) ?></p>
+                                    <p class="mt-3 text-3xl font-extrabold text-[#102118]">
+                                        <?= !empty($card['currency']) ? format_currency((float)$card['value']) : clean((string)$card['value']) ?>
+                                    </p>
+                                    <p class="mt-2 text-sm text-[#6e8d7b]"><?= clean($card['hint']) ?></p>
+                                </div>
+                                <span class="flex size-11 items-center justify-center rounded-2xl bg-white text-[#2e9b63] shadow-sm">
+                                    <span class="material-symbols-outlined"><?= clean($card['icon']) ?></span>
+                                </span>
+                            </div>
+                        </article>
+                    <?php endforeach; ?>
+                </div>
+
+                <article class="rounded-[1.5rem] border border-[#edf4ef] bg-[#102118] p-5 text-white">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-white/65">Khách hàng</p>
+                            <h3 class="mt-2 text-xl font-extrabold">Khách mua nhiều nhất</h3>
+                        </div>
+                        <a href="users.php" class="text-sm font-semibold text-white/80 transition-colors hover:text-white">Quản lý user</a>
+                    </div>
+
+                    <?php if (empty($topCustomers)): ?>
+                        <div class="mt-5 rounded-[1.25rem] bg-white/10 px-4 py-6 text-sm text-white/80">
+                            Chưa có dữ liệu khách mua hàng để thống kê.
+                        </div>
+                    <?php else: ?>
+                        <div class="mt-5 space-y-3">
+                            <?php foreach ($topCustomers as $customer): ?>
+                                <article class="rounded-[1.25rem] bg-white/10 px-4 py-4">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p class="font-bold"><?= clean($customer['full_name'] ?: $customer['username']) ?></p>
+                                            <p class="mt-1 text-sm text-white/70"><?= clean($customer['email']) ?></p>
+                                        </div>
+                                        <span class="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
+                                            <?= clean((string)$customer['completed_order_count']) ?> đơn
+                                        </span>
+                                    </div>
+                                    <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-white/80">
+                                        <span>Đã mua: <strong class="text-white"><?= clean((string)$customer['units_bought']) ?></strong> SP</span>
+                                        <span>Doanh thu: <strong class="text-white"><?= format_currency((float)$customer['gross_revenue']) ?></strong></span>
+                                    </div>
+                                    <p class="mt-3 text-xs text-white/60">
+                                        Mua gần nhất: <?= format_date($customer['last_order_at'], 'd/m/Y H:i') ?>
+                                    </p>
+                                </article>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </article>
+            </div>
+        </section>
+    <?php endif; ?>
 
     <section class="rounded-[2rem] border border-[#d9e9de] bg-white p-6 shadow-sm">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -150,21 +227,34 @@ render_admin_header('Dashboard');
                     <a href="products.php" class="text-sm font-semibold text-[#2e9b63] hover:text-[#22784d]">Quản lý sản phẩm</a>
                 </div>
 
-                <div class="grid gap-4 md:grid-cols-2">
-                    <?php foreach ($topProducts as $product): ?>
-                        <article class="rounded-[1.25rem] border border-[#edf4ef] p-4">
-                            <p class="text-base font-bold text-[#102118]"><?= clean($product['name']) ?></p>
-                            <div class="mt-3 flex items-center justify-between text-sm">
-                                <span class="text-[#6e8d7b]">Đã bán: <strong class="text-[#102118]"><?= clean((string)$product['units_sold']) ?></strong></span>
-                                <span class="text-[#6e8d7b]">Tồn: <strong class="text-[#102118]"><?= clean((string)$product['stock']) ?></strong></span>
-                            </div>
-                            <div class="mt-4 flex flex-wrap gap-3">
-                                <a href="products.php?edit=<?= clean((string)$product['id']) ?>" class="text-sm font-semibold text-[#2e9b63] hover:text-[#22784d]">Sửa nhanh</a>
-                                <a href="../product-detail.php?slug=<?= clean($product['slug']) ?>" class="text-sm font-semibold text-[#102118] hover:text-[#2e9b63]">Xem ngoài site</a>
-                            </div>
-                        </article>
-                    <?php endforeach; ?>
-                </div>
+                <?php if (empty($topProducts)): ?>
+                    <div class="rounded-[1.25rem] border border-dashed border-[#d9e9de] px-5 py-8 text-center text-sm text-[#6e8d7b]">
+                        Chưa có dữ liệu bán hàng để xếp hạng sản phẩm.
+                    </div>
+                <?php else: ?>
+                    <div class="grid gap-4 md:grid-cols-2">
+                        <?php foreach ($topProducts as $product): ?>
+                            <article class="rounded-[1.25rem] border border-[#edf4ef] p-4">
+                                <div class="flex items-start justify-between gap-3">
+                                    <p class="text-base font-bold text-[#102118]"><?= clean($product['name']) ?></p>
+                                    <span class="rounded-full bg-[#eef6f1] px-3 py-1 text-xs font-semibold text-[#456a57]">
+                                        <?= clean((string)$product['order_count']) ?> đơn
+                                    </span>
+                                </div>
+                                <div class="mt-3 grid gap-2 text-sm text-[#6e8d7b]">
+                                    <p>Đã bán: <strong class="text-[#102118]"><?= clean((string)$product['units_sold']) ?></strong> sản phẩm</p>
+                                    <p>Khách mua: <strong class="text-[#102118]"><?= clean((string)$product['customer_count']) ?></strong> người</p>
+                                    <p>Doanh thu: <strong class="text-[#102118]"><?= format_currency((float)$product['gross_revenue']) ?></strong></p>
+                                    <p>Tồn kho: <strong class="text-[#102118]"><?= clean((string)$product['stock']) ?></strong></p>
+                                </div>
+                                <div class="mt-4 flex flex-wrap gap-3">
+                                    <a href="products.php?edit=<?= clean((string)$product['id']) ?>" class="text-sm font-semibold text-[#2e9b63] hover:text-[#22784d]">Sửa nhanh</a>
+                                    <a href="../product-detail.php?slug=<?= clean($product['slug']) ?>" class="text-sm font-semibold text-[#102118] hover:text-[#2e9b63]">Xem ngoài site</a>
+                                </div>
+                            </article>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </article>
         </div>
 
@@ -231,6 +321,18 @@ render_admin_header('Dashboard');
                     <a href="categories.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">CRUD danh mục</a>
                     <a href="users.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">Quản lý user</a>
                     <a href="orders.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">Quản lý đơn hàng</a>
+                    <?php if (admin_has_permission('contacts.manage')): ?>
+                        <a href="contacts.php" class="flex items-center justify-between gap-3 rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">
+                            <span>Liên hệ khách hàng</span>
+                            <?php if (admin_unread_contact_count() > 0): ?>
+                                <span class="inline-flex min-w-6 items-center justify-center rounded-full bg-[#fff3e8] px-2 py-0.5 text-xs font-bold text-[#b56a16]">
+                                    <?= clean((string)admin_unread_contact_count()) ?>
+                                </span>
+                            <?php else: ?>
+                                <span class="text-xs font-medium text-white/65">0 mới</span>
+                            <?php endif; ?>
+                        </a>
+                    <?php endif; ?>
                     <a href="products.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">Sản phẩm + ảnh sản phẩm</a>
                     <a href="check_images.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">Kiểm tra dữ liệu ảnh</a>
                     <a href="clear_cache.php" class="rounded-2xl bg-white/10 px-4 py-3 text-sm font-semibold transition-colors hover:bg-white/15">Clear cache</a>

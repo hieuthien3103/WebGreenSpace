@@ -102,7 +102,7 @@ class CheckoutService {
             }
 
             $fullAddress = $this->formatAddress($payload);
-            $isOnlineMock = $payload['payment_method'] === 'online_mock';
+            $isOnlineMock = payment_method_requires_manual_review($payload['payment_method']);
             $orderId = $this->orderModel->create([
                 'user_id' => $userId,
                 'order_number' => $summary['order_number'],
@@ -384,7 +384,7 @@ class CheckoutService {
             $errors['address_line'] = 'Vui lòng nhập địa chỉ cụ thể.';
         }
 
-        if (!in_array($payload['payment_method'], ['cod', 'online_mock'], true)) {
+        if (!array_key_exists($payload['payment_method'], payment_method_catalog())) {
             $errors['payment_method'] = 'Phương thức thanh toán không hợp lệ.';
         }
 

@@ -17,6 +17,7 @@ function admin_nav_items(): array {
     return [
         'dashboard.php' => ['label' => 'Dashboard'],
         'orders.php' => ['label' => 'Quản lý đơn hàng', 'permission' => 'orders.manage'],
+        'contacts.php' => ['label' => 'Liên hệ khách hàng', 'permission' => 'contacts.manage'],
         'products.php' => ['label' => 'Quản lý sản phẩm', 'permission' => 'products.manage'],
         'categories.php' => ['label' => 'Quản lý danh mục', 'permission' => 'categories.manage'],
         'users.php' => ['label' => 'Quản lý user', 'permission' => 'users.manage'],
@@ -36,6 +37,29 @@ function visible_admin_nav_items(): array {
     }
 
     return $items;
+}
+
+function admin_unread_contact_count(): int {
+    static $count = null;
+
+    if ($count !== null) {
+        return $count;
+    }
+
+    if (!class_exists('ContactMessage')) {
+        $count = 0;
+        return $count;
+    }
+
+    try {
+        $contactModel = new ContactMessage();
+        $stats = $contactModel->getStats();
+        $count = (int)($stats['unread_messages'] ?? 0);
+    } catch (Throwable $e) {
+        $count = 0;
+    }
+
+    return $count;
 }
 
 function render_admin_header(string $title): void {
@@ -88,11 +112,20 @@ function render_admin_header(string $title): void {
 
                     <nav class="mt-4 flex flex-wrap gap-2">
                         <?php foreach (visible_admin_nav_items() as $file => $label): ?>
+                            <?php
+                            $showUnreadContactBadge = $file === 'contacts.php' && admin_has_permission('contacts.manage');
+                            $unreadContactCount = $showUnreadContactBadge ? admin_unread_contact_count() : 0;
+                            ?>
                             <a
                                 href="<?= clean($file) ?>"
-                                class="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition-colors <?= $currentPage === $file ? 'bg-[#102118] text-white' : 'border border-[#d9e9de] text-[#102118] hover:border-[#2e9b63] hover:text-[#2e9b63]' ?>"
+                                class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors <?= $currentPage === $file ? 'bg-[#102118] text-white' : 'border border-[#d9e9de] text-[#102118] hover:border-[#2e9b63] hover:text-[#2e9b63]' ?>"
                             >
                                 <?= clean($label) ?>
+                                <?php if ($showUnreadContactBadge && $unreadContactCount > 0): ?>
+                                    <span class="inline-flex min-w-6 items-center justify-center rounded-full bg-[#fff3e8] px-2 py-0.5 text-xs font-bold text-[#b56a16] <?= $currentPage === $file ? 'bg-white/15 text-white' : '' ?>">
+                                        <?= clean((string)$unreadContactCount) ?>
+                                    </span>
+                                <?php endif; ?>
                             </a>
                         <?php endforeach; ?>
                     </nav>

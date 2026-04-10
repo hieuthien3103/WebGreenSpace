@@ -108,7 +108,7 @@ $cartCount = cart_item_count();
         <!-- Actions -->
         <div class="flex items-center gap-4">
             <!-- Search Bar (Desktop) -->
-            <form action="products.php" method="GET" class="hidden lg:flex w-64 items-center rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] px-4 py-2">
+            <form action="products.php" method="GET" class="hidden lg:flex w-64 items-center rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] px-4 py-2" data-products-search-form="true">
                 <span class="material-symbols-outlined text-text-secondary">search</span>
                 <input id="headerSearchInput" name="search" class="ml-2 w-full bg-transparent border-none p-0 text-sm focus:ring-0 placeholder:text-text-secondary dark:text-white" placeholder="Tìm kiếm sản phẩm..." type="text" autocomplete="off"/>
             </form>
@@ -169,17 +169,17 @@ $cartCount = cart_item_count();
                         <span class="material-symbols-outlined text-text-main dark:text-white">close</span>
                     </button>
                 </div>
-                <form action="products.php" method="GET" class="relative">
+                <form action="products.php" method="GET" class="relative" data-products-search-form="true">
                     <input id="mobileSearchInput" name="search" type="text" placeholder="Nhập tên sản phẩm..." class="w-full pl-12 pr-4 py-4 rounded-xl border-2 border-[#e9f2ec] dark:border-gray-700 bg-white dark:bg-[#131f18] text-text-main dark:text-white focus:border-primary focus:ring-2 focus:ring-primary/20 text-lg" autocomplete="off" />
                     <span class="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-text-secondary text-2xl">search</span>
                 </form>
                 <div class="mt-6">
                     <p class="text-sm text-text-secondary dark:text-gray-400 mb-3">Gợi ý tìm kiếm:</p>
                     <div class="flex flex-wrap gap-2">
-                        <a href="products.php?search=cay+canh" class="px-4 py-2 rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] text-sm text-text-main dark:text-white hover:bg-primary hover:text-white transition-colors">Cây cảnh</a>
-                        <a href="products.php?search=sen+da" class="px-4 py-2 rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] text-sm text-text-main dark:text-white hover:bg-primary hover:text-white transition-colors">Sen đá</a>
-                        <a href="products.php?search=trau+ba" class="px-4 py-2 rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] text-sm text-text-main dark:text-white hover:bg-primary hover:text-white transition-colors">Trầu bà</a>
-                        <a href="products.php?search=xương+rồng" class="px-4 py-2 rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] text-sm text-text-main dark:text-white hover:bg-primary hover:text-white transition-colors">Xương rồng</a>
+                        <a href="products.php?search=cay+canh" data-products-ajax-link="true" class="px-4 py-2 rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] text-sm text-text-main dark:text-white hover:bg-primary hover:text-white transition-colors">Cây cảnh</a>
+                        <a href="products.php?search=sen+da" data-products-ajax-link="true" class="px-4 py-2 rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] text-sm text-text-main dark:text-white hover:bg-primary hover:text-white transition-colors">Sen đá</a>
+                        <a href="products.php?search=trau+ba" data-products-ajax-link="true" class="px-4 py-2 rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] text-sm text-text-main dark:text-white hover:bg-primary hover:text-white transition-colors">Trầu bà</a>
+                        <a href="products.php?search=xương+rồng" data-products-ajax-link="true" class="px-4 py-2 rounded-full bg-[#e9f2ec] dark:bg-[#1f2e25] text-sm text-text-main dark:text-white hover:bg-primary hover:text-white transition-colors">Xương rồng</a>
                     </div>
                 </div>
             </div>

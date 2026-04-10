@@ -9,15 +9,15 @@ require_once __DIR__ . '/../app/core/Router.php';
 $router = new Router();
 
 // Home page
-$router->get('/', __DIR__ . '/home.php');
-$router->get('/home', __DIR__ . '/home.php');
+$router->get('/', [HomeController::class, 'index']);
+$router->get('/home', [HomeController::class, 'index']);
 
 // Products
-$router->get('/products', __DIR__ . '/products.php');
-$router->get('/product/{slug}', __DIR__ . '/product-detail.php');
+$router->get('/products', [ProductController::class, 'index']);
+$router->get('/product/{slug}', [ProductController::class, 'detail']);
 
 // Categories
-$router->get('/category/{slug}', __DIR__ . '/products.php');
+$router->get('/category/{slug}', [ProductController::class, 'category']);
 
 // Cart
 $router->get('/cart', __DIR__ . '/cart.php');
@@ -36,6 +36,7 @@ $router->get('/profile/orders/{id}', __DIR__ . '/order-detail.php');
 
 // Contact
 $router->get('/contact', __DIR__ . '/contact.php');
+$router->post('/contact', __DIR__ . '/contact.php');
 
 // Care guide
 $router->get('/care', __DIR__ . '/care.php');
@@ -52,6 +53,8 @@ $router->get('/admin', __DIR__ . '/admin/dashboard.php');
 $router->get('/admin/dashboard', __DIR__ . '/admin/dashboard.php');
 $router->get('/admin/orders', __DIR__ . '/admin/orders.php');
 $router->post('/admin/orders', __DIR__ . '/admin/orders.php');
+$router->get('/admin/contacts', __DIR__ . '/admin/contacts.php');
+$router->post('/admin/contacts', __DIR__ . '/admin/contacts.php');
 $router->get('/admin/products', __DIR__ . '/admin/products.php');
 $router->get('/admin/categories', __DIR__ . '/admin/categories.php');
 $router->get('/admin/users', __DIR__ . '/admin/users.php');

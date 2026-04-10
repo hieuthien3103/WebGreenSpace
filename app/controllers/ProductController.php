@@ -2,77 +2,62 @@
 /**
  * Product Controller
  */
+class ProductController extends Controller {
+    private ProductPresenter $productPresenter;
 
-class ProductController {
-    
+    public function __construct(?Request $request = null, ?ProductPresenter $productPresenter = null) {
+        parent::__construct($request);
+        $this->productPresenter = $productPresenter ?? new ProductPresenter();
+    }
+
     /**
      * Display product listing page
      */
-    public function index() {
-        // Get all products
-        $productModel = new Product();
-        $products = $productModel->getAll(12);
-        
-        // Get categories for filter
-        $categoryModel = new Category();
-        $categories = $categoryModel->getAll();
-        
-        // Load view
-        include APP_PATH . '/views/products/index.php';
+    public function index(): ViewResponse {
+        return $this->catalogResponse(ProductCatalogRequestData::fromRequest($this->request, [
+            'limit' => ITEMS_PER_PAGE,
+        ]));
     }
-    
+
     /**
      * Display product detail page
      */
-    public function detail($slug) {
-        // Get product by slug
-        $productModel = new Product();
-        $product = $productModel->getBySlug($slug);
-        
-        if (!$product) {
-            http_response_code(404);
-            echo '<h1>404 - Sản phẩm không tồn tại</h1>';
-            return;
+    public function detail(string $slug): Response {
+        $viewData = $this->productPresenter->presentDetail($slug);
+        if ($viewData === null) {
+            return $this->notFoundResponse('Sản phẩm bạn đang tìm không còn tồn tại hoặc đã ngừng kinh doanh.');
         }
-        
-        // Get product images
-        $images = $productModel->getImages($product['id']);
-        
-        // Get product tags
-        $tags = $productModel->getTags($product['id']);
-        
-        // Get related products (same category)
-        $relatedProducts = [];
-        if (!empty($product['category_id'])) {
-            $relatedProducts = $productModel->getRelatedProducts($product['id'], $product['category_id'], 4);
-        }
-        
-        // Load view
-        include APP_PATH . '/views/products/detail.php';
+
+        return $this->view('storefront/products/detail', $viewData);
     }
-    
+
     /**
      * Display products by category
      */
-    public function category($slug) {
-        // Get category by slug
-        $categoryModel = new Category();
-        $category = $categoryModel->getBySlug($slug);
-        
-        if (!$category) {
-            http_response_code(404);
-            echo '<h1>404 - Danh mục không tồn tại</h1>';
-            return;
+    public function category(string $slug): Response {
+        $catalogRequest = ProductCatalogRequestData::fromRequest($this->request, [
+            'category' => $slug,
+            'limit' => ITEMS_PER_PAGE,
+            'use_category_path' => true,
+        ]);
+
+        $viewData = $this->productPresenter->presentCatalog($catalogRequest);
+        if (empty($viewData['category'])) {
+            return $this->notFoundResponse('Danh mục bạn đang mở không tồn tại hoặc đã bị ẩn.');
         }
-        
-        // Get products in this category
-        $productModel = new Product();
-        $products = $productModel->getByCategory($category['id'], 12);
-        
-        // Get all categories for filter
-        $categories = $categoryModel->getAll();
-        
-        // Load view
-        include APP_PATH . '/views/products/index.php';
+
+        return $this->catalogResponse($catalogRequest, $viewData);
+    }
+
+    /**
+     * Render the product list page or AJAX fragment.
+     */
+    private function catalogResponse(ProductCatalogRequestData $catalogRequest, ?array $viewData = null): ViewResponse {
+        $viewData ??= $this->productPresenter->presentCatalog($catalogRequest);
+        $view = $this->request->isAjax()
+            ? 'storefront/products/content'
+            : 'storefront/products/index';
+
+        return $this->view($view, $viewData);
     }
 }

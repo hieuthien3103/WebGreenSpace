@@ -1,53 +1,11 @@
 <?php
+if (empty($GLOBALS['mvc_template_rendering'])) {
+    require_once __DIR__ . '/../config/config.php';
+    (new AccountController())->qrPay()->send();
+    return;
+}
+
 require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../config/database.php';
-
-function qr_pay_build_token(int $orderId, int $userId, string $orderNumber): string {
-    return build_qr_payment_token($orderId, $userId, $orderNumber);
-}
-
-$orderModel = new Order();
-$orderId = max(0, (int)($_GET['order_id'] ?? $_POST['order_id'] ?? 0));
-$token = trim((string)($_GET['token'] ?? $_POST['token'] ?? ''));
-
-$order = $orderId > 0 ? $orderModel->getOnlineMockOrderForPortal($orderId) : null;
-$isValidToken = $order
-    ? hash_equals(qr_pay_build_token((int)$order['id'], (int)$order['user_id'], (string)$order['order_number']), $token)
-    : false;
-
-$portalError = null;
-$portalSuccess = null;
-
-if (!$order || !$isValidToken) {
-    $portalError = 'Lien ket thanh toan khong hop le hoac da het han.';
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$portalError) {
-    $action = (string)($_POST['action'] ?? '');
-
-    if ($action === 'confirm_qr_payment') {
-        if ((string)($order['order_status'] ?? '') === 'cancelled') {
-            $portalError = 'Don hang da bi huy nen khong the xac nhan thanh toan QR nua.';
-        } elseif ((string)$order['payment_status'] === 'pending_review') {
-            $portalSuccess = 'Yeu cau thanh toan da duoc gui truoc do. Admin dang xu ly.';
-        } elseif ((string)$order['payment_status'] === 'paid') {
-            $portalSuccess = 'Don hang da duoc admin duyet thanh toan.';
-        } elseif ((string)$order['payment_status'] !== 'unpaid') {
-            $portalError = 'Don hang hien khong o trang thai cho thanh toan QR.';
-        } else {
-            $submitted = $orderModel->confirmOnlineMockPaymentByPortal((int)$order['id']);
-
-            if ($submitted) {
-                $portalSuccess = 'Da gui yeu cau thanh toan den admin ngay lap tuc. Vui long cho duyet.';
-                $order = $orderModel->getOnlineMockOrderForPortal((int)$order['id']);
-            } else {
-                $portalError = $orderModel->getLastErrorMessage() ?? 'Khong the gui yeu cau thanh toan luc nay. Vui long thu lai.';
-            }
-        }
-    }
-}
-
-$pageTitle = 'Thanh toan QR mo phong - GreenSpace';
 ?>
 <!doctype html>
 <html lang="vi">

@@ -2,22 +2,18 @@
 /**
  * Home Controller
  */
+class HomeController extends Controller {
+    private HomePresenter $homePresenter;
 
-class HomeController {
-    
+    public function __construct(?Request $request = null, ?HomePresenter $homePresenter = null) {
+        parent::__construct($request);
+        $this->homePresenter = $homePresenter ?? new HomePresenter();
+    }
+
     /**
      * Display homepage
      */
-    public function index() {
-        // Get categories for display
-        $categoryModel = new Category();
-        $categories = $categoryModel->getTop(5);
-        
-        // Get best selling products
-        $productModel = new Product();
-        $bestSellers = $productModel->getBestSellers(8);
-        
-        // Load view
-        include APP_PATH . '/views/home/index.php';
+    public function index(): ViewResponse {
+        return $this->view('storefront/home/index', $this->homePresenter->presentIndex());
     }
 }

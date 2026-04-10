@@ -88,9 +88,13 @@ if (session_status() === PHP_SESSION_NONE) {
 // Autoload classes
 spl_autoload_register(function ($class) {
     $paths = [
+        APP_PATH . '/core/' . $class . '.php',
         APP_PATH . '/controllers/' . $class . '.php',
         APP_PATH . '/models/' . $class . '.php',
         APP_PATH . '/services/' . $class . '.php',
+        APP_PATH . '/dto/' . $class . '.php',
+        APP_PATH . '/presenters/' . $class . '.php',
+        APP_PATH . '/routing/' . $class . '.php',
         CONFIG_PATH . '/' . $class . '.php',
         BASE_PATH . '/helpers/' . $class . '.php',
     ];
@@ -105,3 +109,6 @@ spl_autoload_register(function ($class) {
 
 // Load helper functions
 require_once BASE_PATH . '/helpers/functions.php';
+
+// Load shared infrastructure classes that use lowercase filenames.
+require_once CONFIG_PATH . '/database.php';

@@ -1,7 +1,11 @@
 <?php
+if (empty($GLOBALS['mvc_template_rendering'])) {
+    require_once __DIR__ . '/../config/config.php';
+    (new ContentController())->contact()->send();
+    return;
+}
+
 require_once __DIR__ . '/../config/config.php';
-$pageTitle = 'Liên hệ - GreenSpace';
-$currentPage = 'contact';
 include 'includes/header.php'; 
 ?>
 
@@ -30,30 +34,48 @@ include 'includes/header.php';
                     <h2 class="text-2xl font-bold mb-2 text-text-main dark:text-white">Gửi tin nhắn cho chúng mình</h2>
                     <p class="text-text-secondary dark:text-gray-400">Điền thông tin vào mẫu dưới đây, team GreenSpace sẽ phản hồi bạn sớm nhất có thể.</p>
                 </div>
+
+                <?php if (!empty($errors['general'])): ?>
+                    <div class="mb-6 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+                        <?= clean($errors['general']) ?>
+                    </div>
+                <?php endif; ?>
                 
-                <form class="flex flex-col gap-6">
+                <form method="POST" class="flex flex-col gap-6">
+                    <input type="hidden" name="csrf_token" value="<?= clean(csrf_token()) ?>">
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <label class="flex flex-col gap-2">
                             <span class="text-sm font-bold text-text-main dark:text-white ml-1">Họ và tên</span>
-                            <input class="w-full h-12 px-4 rounded-full bg-background-light dark:bg-background-dark border-transparent focus:border-primary focus:ring-primary text-sm transition-all placeholder:text-gray-400 dark:placeholder:text-gray-600" placeholder="Nhập tên của bạn" type="text"/>
+                            <input name="full_name" value="<?= clean($values['full_name']) ?>" class="w-full h-12 px-4 rounded-full bg-background-light dark:bg-background-dark <?= !empty($errors['full_name']) ? 'border-red-300' : 'border-transparent' ?> focus:border-primary focus:ring-primary text-sm transition-all placeholder:text-gray-400 dark:placeholder:text-gray-600" placeholder="Nhập tên của bạn" type="text"/>
+                            <?php if (!empty($errors['full_name'])): ?><span class="text-sm text-red-600"><?= clean($errors['full_name']) ?></span><?php endif; ?>
                         </label>
                         <label class="flex flex-col gap-2">
                             <span class="text-sm font-bold text-text-main dark:text-white ml-1">Email</span>
-                            <input class="w-full h-12 px-4 rounded-full bg-background-light dark:bg-background-dark border-transparent focus:border-primary focus:ring-primary text-sm transition-all placeholder:text-gray-400 dark:placeholder:text-gray-600" placeholder="email@example.com" type="email"/>
+                            <input name="email" value="<?= clean($values['email']) ?>" class="w-full h-12 px-4 rounded-full bg-background-light dark:bg-background-dark <?= !empty($errors['email']) ? 'border-red-300' : 'border-transparent' ?> focus:border-primary focus:ring-primary text-sm transition-all placeholder:text-gray-400 dark:placeholder:text-gray-600" placeholder="email@example.com" type="email"/>
+                            <?php if (!empty($errors['email'])): ?><span class="text-sm text-red-600"><?= clean($errors['email']) ?></span><?php endif; ?>
                         </label>
                     </div>
+
+                    <label class="flex flex-col gap-2">
+                        <span class="text-sm font-bold text-text-main dark:text-white ml-1">Số điện thoại</span>
+                        <input name="phone" value="<?= clean($values['phone']) ?>" class="w-full h-12 px-4 rounded-full bg-background-light dark:bg-background-dark <?= !empty($errors['phone']) ? 'border-red-300' : 'border-transparent' ?> focus:border-primary focus:ring-primary text-sm transition-all placeholder:text-gray-400 dark:placeholder:text-gray-600" placeholder="Ví dụ: 0901 234 567" type="text"/>
+                        <?php if (!empty($errors['phone'])): ?><span class="text-sm text-red-600"><?= clean($errors['phone']) ?></span><?php endif; ?>
+                    </label>
                     
                     <label class="flex flex-col gap-2">
                         <span class="text-sm font-bold text-text-main dark:text-white ml-1">Tiêu đề</span>
-                        <input class="w-full h-12 px-4 rounded-full bg-background-light dark:bg-background-dark border-transparent focus:border-primary focus:ring-primary text-sm transition-all placeholder:text-gray-400 dark:placeholder:text-gray-600" placeholder="Vấn đề bạn quan tâm" type="text"/>
+                        <input name="subject" value="<?= clean($values['subject']) ?>" class="w-full h-12 px-4 rounded-full bg-background-light dark:bg-background-dark <?= !empty($errors['subject']) ? 'border-red-300' : 'border-transparent' ?> focus:border-primary focus:ring-primary text-sm transition-all placeholder:text-gray-400 dark:placeholder:text-gray-600" placeholder="Vấn đề bạn quan tâm" type="text"/>
+                        <?php if (!empty($errors['subject'])): ?><span class="text-sm text-red-600"><?= clean($errors['subject']) ?></span><?php endif; ?>
                     </label>
                     
                     <label class="flex flex-col gap-2">
                         <span class="text-sm font-bold text-text-main dark:text-white ml-1">Nội dung</span>
-                        <textarea class="w-full p-4 rounded-xl bg-background-light dark:bg-background-dark border-transparent focus:border-primary focus:ring-primary text-sm transition-all resize-none placeholder:text-gray-400 dark:placeholder:text-gray-600" placeholder="Chia sẻ với chúng mình..." rows="5"></textarea>
+                        <textarea name="message" class="w-full p-4 rounded-xl bg-background-light dark:bg-background-dark <?= !empty($errors['message']) ? 'border-red-300' : 'border-transparent' ?> focus:border-primary focus:ring-primary text-sm transition-all resize-none placeholder:text-gray-400 dark:placeholder:text-gray-600" placeholder="Chia sẻ với chúng mình..." rows="5"><?= clean($values['message']) ?></textarea>
+                        <?php if (!empty($errors['message'])): ?><span class="text-sm text-red-600"><?= clean($errors['message']) ?></span><?php endif; ?>
                     </label>
                     
-                    <button class="mt-2 h-12 w-full md:w-auto px-8 bg-primary hover:bg-primary-dark text-white font-bold rounded-full transition-all shadow-lg shadow-primary/30 flex items-center justify-center gap-2 self-start" type="button">
+                    <button class="mt-2 h-12 w-full md:w-auto px-8 bg-primary hover:bg-primary-dark text-white font-bold rounded-full transition-all shadow-lg shadow-primary/30 flex items-center justify-center gap-2 self-start" type="submit">
                         <span>Gửi tin nhắn</span>
                         <span class="material-symbols-outlined text-sm">send</span>
                     </button>

@@ -1,22 +1,24 @@
 <?php
 require_once __DIR__ . '/../../config/config.php';
-require_once __DIR__ . '/../../config/database.php';
 
-if (!is_logged_in()) {
-    $redirectTarget = basename((string)parse_url($_SERVER['REQUEST_URI'] ?? 'dashboard.php', PHP_URL_PATH));
-    set_flash('error', 'Vui lòng đăng nhập bằng tài khoản admin.');
-    redirect('login.php?redirect=' . urlencode($redirectTarget ?: 'dashboard.php'));
-}
+if (empty($GLOBALS['mvc_template_rendering'])) {
+    if (!is_logged_in()) {
+        $redirectTarget = basename((string)parse_url($_SERVER['REQUEST_URI'] ?? 'dashboard.php', PHP_URL_PATH));
+        set_flash('error', 'Vui lòng đăng nhập bằng tài khoản admin.');
+        redirect('login.php?redirect=' . urlencode($redirectTarget ?: 'dashboard.php'));
+    }
 
-if (!is_admin()) {
-    set_flash('error', 'Bạn không có quyền truy cập khu vực admin.');
-    redirect('../home.php');
+    if (!is_admin()) {
+        set_flash('error', 'Bạn không có quyền truy cập khu vực admin.');
+        redirect('../home.php');
+    }
 }
 
 function admin_nav_items(): array {
     return [
         'dashboard.php' => ['label' => 'Dashboard'],
         'orders.php' => ['label' => 'Quản lý đơn hàng', 'permission' => 'orders.manage'],
+        'contacts.php' => ['label' => 'Liên hệ khách hàng', 'permission' => 'contacts.manage'],
         'products.php' => ['label' => 'Quản lý sản phẩm', 'permission' => 'products.manage'],
         'categories.php' => ['label' => 'Quản lý danh mục', 'permission' => 'categories.manage'],
         'users.php' => ['label' => 'Quản lý user', 'permission' => 'users.manage'],
@@ -38,10 +40,33 @@ function visible_admin_nav_items(): array {
     return $items;
 }
 
+function admin_unread_contact_count(): int {
+    static $count = null;
+
+    if ($count !== null) {
+        return $count;
+    }
+
+    if (!class_exists('ContactMessage')) {
+        $count = 0;
+        return $count;
+    }
+
+    try {
+        $contactModel = new ContactMessage();
+        $stats = $contactModel->getStats();
+        $count = (int)($stats['unread_messages'] ?? 0);
+    } catch (Throwable $e) {
+        $count = 0;
+    }
+
+    return $count;
+}
+
 function render_admin_header(string $title): void {
     $flash = get_flash();
     $adminName = get_user_name() ?? 'Admin';
-    $currentPage = basename((string)parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH));
+    $currentPage = (string)($GLOBALS['mvc_template_current_page'] ?? basename((string)parse_url($_SERVER['REQUEST_URI'] ?? '', PHP_URL_PATH)));
     ?>
     <!DOCTYPE html>
     <html lang="vi">
@@ -71,13 +96,13 @@ function render_admin_header(string $title): void {
                         </div>
 
                         <div class="flex flex-wrap items-center gap-3">
-                            <a href="../home.php" class="inline-flex items-center rounded-full border border-[#d9e9de] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">
+                            <a href="<?= clean(base_url('public/home.php')) ?>" class="inline-flex items-center rounded-full border border-[#d9e9de] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">
                                 Về trang bán hàng
                             </a>
-                            <a href="../profile.php" class="inline-flex items-center rounded-full border border-[#d9e9de] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">
+                            <a href="<?= clean(base_url('public/profile.php')) ?>" class="inline-flex items-center rounded-full border border-[#d9e9de] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">
                                 <?= clean($adminName) ?>
                             </a>
-                            <form action="../logout.php" method="POST">
+                            <form action="<?= clean(base_url('public/logout.php')) ?>" method="POST">
                                 <input type="hidden" name="csrf_token" value="<?= clean(csrf_token()) ?>">
                                 <button type="submit" class="inline-flex items-center rounded-full bg-[#102118] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#1f3b2d]">
                                     Đăng xuất
@@ -88,11 +113,20 @@ function render_admin_header(string $title): void {
 
                     <nav class="mt-4 flex flex-wrap gap-2">
                         <?php foreach (visible_admin_nav_items() as $file => $label): ?>
+                            <?php
+                            $showUnreadContactBadge = $file === 'contacts.php' && admin_has_permission('contacts.manage');
+                            $unreadContactCount = $showUnreadContactBadge ? admin_unread_contact_count() : 0;
+                            ?>
                             <a
-                                href="<?= clean($file) ?>"
-                                class="inline-flex items-center rounded-full px-4 py-2 text-sm font-semibold transition-colors <?= $currentPage === $file ? 'bg-[#102118] text-white' : 'border border-[#d9e9de] text-[#102118] hover:border-[#2e9b63] hover:text-[#2e9b63]' ?>"
+                                href="<?= clean(admin_path($file)) ?>"
+                                class="inline-flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors <?= $currentPage === $file ? 'bg-[#102118] text-white' : 'border border-[#d9e9de] text-[#102118] hover:border-[#2e9b63] hover:text-[#2e9b63]' ?>"
                             >
                                 <?= clean($label) ?>
+                                <?php if ($showUnreadContactBadge && $unreadContactCount > 0): ?>
+                                    <span class="inline-flex min-w-6 items-center justify-center rounded-full bg-[#fff3e8] px-2 py-0.5 text-xs font-bold text-[#b56a16] <?= $currentPage === $file ? 'bg-white/15 text-white' : '' ?>">
+                                        <?= clean((string)$unreadContactCount) ?>
+                                    </span>
+                                <?php endif; ?>
                             </a>
                         <?php endforeach; ?>
                     </nav>

@@ -1,3 +1,4 @@
 <?php
-require_once __DIR__ . '/bootstrap.php';
-redirect('products.php');
+require_once __DIR__ . '/../../config/config.php';
+
+(new AdminToolController())->adminUploadImages()->send();

@@ -1,16 +1,11 @@
 <?php
-require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../config/database.php';
-
-if (!is_logged_in()) {
-    $redirectTarget = 'order-detail.php';
-    $rawOrderId = $id ?? ($_GET['id'] ?? null);
-    if ($rawOrderId !== null) {
-        $redirectTarget .= '?id=' . urlencode((string)$rawOrderId);
-    }
-
-    redirect('login.php?redirect=' . urlencode($redirectTarget));
+if (empty($GLOBALS['mvc_template_rendering'])) {
+    require_once __DIR__ . '/../config/config.php';
+    (new AccountController())->orderDetail()->send();
+    return;
 }
+
+require_once __DIR__ . '/../config/config.php';
 
 function order_detail_order_status_meta(string $status): array {
     $map = [
@@ -39,135 +34,8 @@ function order_detail_payment_status_meta(string $status): array {
 }
 
 function order_detail_payment_method_label(string $method): string {
-    $map = [
-        'cod' => 'Thanh toán khi nhận hàng',
-        'online_mock' => 'Chuyển khoản giả lập',
-    ];
-
-    return $map[$method] ?? $method;
+    return payment_method_label($method);
 }
-
-function order_detail_qr_payment_token(int $orderId, int $userId, string $orderNumber): string {
-    return build_qr_payment_token($orderId, $userId, $orderNumber);
-}
-
-$orderId = max(0, (int)($id ?? ($_GET['id'] ?? 0)));
-if ($orderId <= 0) {
-    set_flash('error', 'Không tìm thấy đơn hàng cần xem.');
-    redirect('orders.php');
-}
-
-$orderModel = new Order();
-$userId = (int)get_user_id();
-$order = $orderModel->getDetailByUserId($userId, $orderId);
-
-if (!$order) {
-    set_flash('error', 'Không tìm thấy đơn hàng hoặc bạn không có quyền xem đơn này.');
-    redirect('orders.php');
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') === 'confirm_online_mock_payment') {
-    if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
-        set_flash('error', 'Phiên làm việc đã hết hạn. Vui lòng thử lại.');
-        redirect('order-detail.php?id=' . urlencode((string)$orderId) . '#payment-confirmation');
-    }
-
-    $isOnlineMockOrder = (string)$order['payment_method'] === 'online_mock';
-    $isUnpaidOrder = (string)$order['payment_status'] === 'unpaid';
-    $isCancelledOrder = (string)$order['order_status'] === 'cancelled';
-
-    if (!$isOnlineMockOrder) {
-        set_flash('error', 'Đơn hàng này không sử dụng chuyển khoản giả lập.');
-        redirect('order-detail.php?id=' . urlencode((string)$orderId) . '#payment-confirmation');
-    }
-
-    if ($isCancelledOrder) {
-        set_flash('error', 'Đơn hàng đã bị hủy nên không thể xác nhận thanh toán nữa.');
-        redirect('order-detail.php?id=' . urlencode((string)$orderId) . '#payment-confirmation');
-    }
-
-    if (!$isUnpaidOrder) {
-        if ((string)$order['payment_status'] === 'pending_review') {
-            set_flash('success', 'Bạn đã gửi yêu cầu thanh toán QR. Admin đã nhận được và đang duyệt.');
-        } else {
-            set_flash('success', 'Đơn hàng này đã được ghi nhận thanh toán trước đó.');
-        }
-        redirect('order-detail.php?id=' . urlencode((string)$orderId) . '#payment-confirmation');
-    }
-
-    if ((string)($_POST['qr_scanned'] ?? '0') !== '1') {
-        set_flash('error', 'Vui lòng mô phỏng quét mã QR trước khi thanh toán.');
-        redirect('order-detail.php?id=' . urlencode((string)$orderId) . '#payment-confirmation');
-    }
-
-    $confirmed = $orderModel->confirmOnlineMockPaymentByUser($userId, $orderId);
-
-    if ($confirmed) {
-        set_flash('success', 'Đã gửi yêu cầu thanh toán QR đến admin ngay lập tức. Đơn hàng đang chờ duyệt.');
-    } else {
-        $paymentError = $orderModel->getLastErrorMessage();
-        set_flash('error', $paymentError ?: 'Không thể xác nhận thanh toán lúc này. Vui lòng thử lại.');
-    }
-
-    redirect('order-detail.php?id=' . urlencode((string)$orderId) . '#payment-confirmation');
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && (string)($_POST['action'] ?? '') === 'resubmit_online_mock_payment') {
-    if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
-        set_flash('error', 'Phiên làm việc đã hết hạn. Vui lòng thử lại.');
-        redirect('order-detail.php?id=' . urlencode((string)$orderId) . '#payment-confirmation');
-    }
-
-    $isOnlineMockOrder = (string)$order['payment_method'] === 'online_mock';
-    $isRejectedOrder = (string)$order['payment_status'] === 'failed';
-    $isCancelledOrder = (string)$order['order_status'] === 'cancelled';
-
-    if (!$isOnlineMockOrder) {
-        set_flash('error', 'Đơn hàng này không sử dụng chuyển khoản giả lập.');
-        redirect('order-detail.php?id=' . urlencode((string)$orderId) . '#payment-confirmation');
-    }
-
-    if ($isCancelledOrder) {
-        set_flash('error', 'Đơn hàng đã bị hủy nên không thể gửi lại yêu cầu thanh toán.');
-        redirect('order-detail.php?id=' . urlencode((string)$orderId) . '#payment-confirmation');
-    }
-
-    if (!$isRejectedOrder) {
-        set_flash('error', 'Đơn hàng này hiện không ở trạng thái cần gửi lại yêu cầu thanh toán.');
-        redirect('order-detail.php?id=' . urlencode((string)$orderId) . '#payment-confirmation');
-    }
-
-    $resubmitted = $orderModel->resubmitOnlineMockPaymentByUser($userId, $orderId);
-
-    if ($resubmitted) {
-        set_flash('success', 'Đã gửi lại yêu cầu duyệt chuyển khoản giả lập. Vui lòng chờ admin duyệt.');
-    } else {
-        $paymentError = $orderModel->getLastErrorMessage();
-        set_flash('error', $paymentError ?: 'Không thể gửi lại yêu cầu thanh toán lúc này. Vui lòng thử lại.');
-    }
-
-    redirect('order-detail.php?id=' . urlencode((string)$orderId) . '#payment-confirmation');
-}
-
-$orderStatus = order_detail_order_status_meta((string)$order['order_status']);
-$paymentStatus = order_detail_payment_status_meta((string)$order['payment_status']);
-$payment = $order['payment'] ?? null;
-$orderItems = $order['items'] ?? [];
-$isOnlineMockOrder = (string)$order['payment_method'] === 'online_mock';
-$isCancelledOrder = (string)$order['order_status'] === 'cancelled';
-$canConfirmMockPayment = $isOnlineMockOrder && !$isCancelledOrder && (string)$order['payment_status'] === 'unpaid';
-$canResubmitMockPayment = $isOnlineMockOrder && !$isCancelledOrder && (string)$order['payment_status'] === 'failed';
-$mockBankName = 'GreenSpace Virtual Bank';
-$mockAccountNumber = '1021182026';
-$mockAccountName = 'CONG TY GREENSPACE DEMO';
-$mockTransferContent = (string)$order['order_number'];
-$mockTransferAmount = (int)round((float)$order['total_amount']);
-$mockQrToken = order_detail_qr_payment_token($orderId, $userId, (string)$order['order_number']);
-$mockQrPayUrl = 'qr-pay.php?order_id=' . urlencode((string)$orderId) . '&token=' . urlencode($mockQrToken);
-$mockQrPayload = $mockQrPayUrl;
-$mockQrImageUrl = 'https://quickchart.io/qr?size=300&margin=1&text=' . rawurlencode($mockQrPayload);
-$pageTitle = 'Chi tiết đơn hàng - GreenSpace';
-$currentPage = '';
 
 include 'includes/header.php';
 ?>

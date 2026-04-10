@@ -16,12 +16,21 @@ function redirect(string $url): never {
 
 /**
  * Get base URL
- * 
+ *
  * @param string $path Path to append
  * @return string Full URL
  */
 function base_url(string $path = ''): string {
-    return APP_URL . '/' . ltrim($path, '/');
+    $configuredUrl = rtrim(APP_URL, '/');
+
+    if (!empty($_SERVER['HTTP_HOST'])) {
+        $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+        $configuredPath = (string)parse_url($configuredUrl, PHP_URL_PATH);
+        $configuredPath = $configuredPath === '/' ? '' : rtrim($configuredPath, '/');
+        $configuredUrl = $scheme . '://' . $_SERVER['HTTP_HOST'] . $configuredPath;
+    }
+
+    return rtrim($configuredUrl, '/') . '/' . ltrim($path, '/');
 }
 
 /**
@@ -41,7 +50,7 @@ function asset(string $path): string {
  * @return string Full image URL
  */
 function image_url(string $path): string {
-    return IMG_URL . '/' . ltrim($path, '/');
+    return base_url('public/images/' . ltrim($path, '/'));
 }
 
 /**
@@ -51,7 +60,7 @@ function image_url(string $path): string {
  * @return string Full upload URL
  */
 function upload_url(string $path): string {
-    return UPLOAD_URL . '/' . ltrim($path, '/');
+    return base_url('uploads/' . ltrim($path, '/'));
 }
 
 /**
@@ -164,6 +173,10 @@ function admin_permission_catalog(): array {
         'users.manage' => [
             'label' => 'Quản lý tài khoản',
             'description' => 'Phân quyền, khóa/mở và cập nhật tài khoản người dùng.',
+        ],
+        'contacts.manage' => [
+            'label' => 'Quản lý liên hệ',
+            'description' => 'Đọc tin nhắn từ form liên hệ và theo dõi trạng thái xử lý.',
         ],
     ];
 }
@@ -471,6 +484,83 @@ function app_secret(): string {
  */
 function build_qr_payment_token(int $orderId, int $userId, string $orderNumber): string {
     return hash_hmac('sha256', $orderId . '|' . $userId . '|' . $orderNumber, app_secret());
+}
+
+/**
+ * Payment method catalog shared across checkout, user screens, and admin.
+ *
+ * @return array<string, array<string, mixed>>
+ */
+function payment_method_catalog(): array {
+    return [
+        'cod' => [
+            'label' => 'Thanh toán khi nhận hàng',
+            'description' => 'Phù hợp với đơn cần xác nhận thủ công và giao tận nơi.',
+            'icon' => 'local_shipping',
+            'is_online' => false,
+            'is_manual_review' => false,
+        ],
+        'online_mock' => [
+            'label' => 'Chuyển khoản giả lập',
+            'description' => 'Nhận thông tin tài khoản mô phỏng và bấm "Tôi đã thanh toán" sau khi chuyển khoản.',
+            'icon' => 'credit_card',
+            'is_online' => true,
+            'is_manual_review' => true,
+        ],
+    ];
+}
+
+/**
+ * Get one payment method's metadata.
+ *
+ * @return array<string, mixed>
+ */
+function payment_method_meta(string $method): array {
+    $catalog = payment_method_catalog();
+
+    return $catalog[$method] ?? [
+        'label' => $method,
+        'description' => '',
+        'icon' => 'payments',
+        'is_online' => false,
+        'is_manual_review' => false,
+    ];
+}
+
+/**
+ * Get payment methods ready for checkout rendering.
+ *
+ * @return array<int, array<string, mixed>>
+ */
+function payment_checkout_options(): array {
+    $options = [];
+
+    foreach (payment_method_catalog() as $value => $meta) {
+        $options[] = array_merge(['value' => $value], $meta);
+    }
+
+    return $options;
+}
+
+/**
+ * Human-friendly payment method label.
+ */
+function payment_method_label(string $method): string {
+    return (string)(payment_method_meta($method)['label'] ?? $method);
+}
+
+/**
+ * Whether the method is an online payment flow.
+ */
+function payment_method_is_online(string $method): bool {
+    return !empty(payment_method_meta($method)['is_online']);
+}
+
+/**
+ * Whether the method still needs manual review after buyer confirms payment.
+ */
+function payment_method_requires_manual_review(string $method): bool {
+    return !empty(payment_method_meta($method)['is_manual_review']);
 }
 
 /**

@@ -1,39 +1,11 @@
 <?php
+if (empty($GLOBALS['mvc_template_rendering'])) {
+    require_once __DIR__ . '/../../config/config.php';
+    (new AdminAuthController())->login()->send();
+    return;
+}
+
 require_once __DIR__ . '/../../config/config.php';
-require_once __DIR__ . '/../../config/database.php';
-
-if (is_logged_in() && is_admin()) {
-    redirect(admin_path('dashboard.php'));
-}
-
-$pageTitle = 'Đăng nhập admin - GreenSpace';
-$errors = [];
-$old = [
-    'identifier' => '',
-];
-$redirectTarget = safe_redirect_target($_GET['redirect'] ?? $_POST['redirect'] ?? 'dashboard.php', 'dashboard.php');
-$redirectTarget = str_starts_with($redirectTarget, 'admin/') ? substr($redirectTarget, 6) : ltrim($redirectTarget, '/');
-$redirectTarget = $redirectTarget !== '' ? $redirectTarget : 'dashboard.php';
-$switchingAccount = is_logged_in() && !is_admin();
-$flash = get_flash();
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $old['identifier'] = trim((string)($_POST['identifier'] ?? ''));
-
-    if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
-        $errors['general'] = 'Phiên làm việc đã hết hạn. Vui lòng thử lại.';
-    } else {
-        $authService = new AuthService();
-        $result = $authService->loginAdmin($old['identifier'], (string)($_POST['password'] ?? ''));
-
-        if (!empty($result['success'])) {
-            set_flash('success', 'Đăng nhập admin thành công.');
-            redirect(admin_path($redirectTarget));
-        }
-
-        $errors = $result['errors'] ?? ['general' => 'Không thể đăng nhập admin lúc này.'];
-    }
-}
 ?>
 <!DOCTYPE html>
 <html class="light" lang="vi">

@@ -1,209 +1,11 @@
 <?php
+if (empty($GLOBALS['mvc_template_rendering'])) {
+    require_once __DIR__ . '/../config/config.php';
+    (new CheckoutController())->index()->send();
+    return;
+}
+
 require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../config/database.php';
-
-if (!is_logged_in()) {
-    redirect('login.php?redirect=' . urlencode('checkout.php'));
-}
-
-$cartService = new CartService();
-if ($cartService->isEmpty()) {
-    set_flash('error', 'Giỏ hàng đang trống. Vui lòng thêm sản phẩm trước khi thanh toán.');
-    redirect('cart.php');
-}
-
-function checkout_collect_address_payload(array $input): array {
-    return [
-        'receiver_name' => trim((string)($input['full_name'] ?? '')),
-        'phone' => trim((string)($input['phone'] ?? '')),
-        'province' => trim((string)($input['province'] ?? '')),
-        'district' => trim((string)($input['district'] ?? '')),
-        'ward' => trim((string)($input['ward'] ?? '')),
-        'address_line' => trim((string)($input['address_line'] ?? '')),
-    ];
-}
-
-function checkout_validate_quick_address(array $payload): array {
-    $errors = [];
-
-    if (($payload['receiver_name'] ?? '') === '') {
-        $errors['full_name'] = 'Vui lòng nhập họ tên người nhận.';
-    }
-
-    if (($payload['phone'] ?? '') === '') {
-        $errors['phone'] = 'Vui lòng nhập số điện thoại.';
-    }
-
-    if (($payload['province'] ?? '') === '') {
-        $errors['province'] = 'Vui lòng nhập tỉnh/thành.';
-    }
-
-    if (($payload['district'] ?? '') === '') {
-        $errors['district'] = 'Vui lòng nhập quận/huyện.';
-    }
-
-    if (($payload['address_line'] ?? '') === '') {
-        $errors['address_line'] = 'Vui lòng nhập địa chỉ cụ thể.';
-    }
-
-    return $errors;
-}
-
-$userId = (int)get_user_id();
-$summary = $cartService->getSummary();
-$items = $summary['items'];
-$userModel = new User();
-$addressModel = new Address();
-$currentUser = $userModel->findById($userId) ?? get_user();
-$savedAddresses = $addressModel->getAllByUserId($userId);
-$defaultAddress = $addressModel->getDefaultByUserId($userId);
-$defaultAddressId = (int)($defaultAddress['id'] ?? 0);
-$selectedAddressId = $defaultAddressId;
-$selectedAddress = $defaultAddress;
-$preferredSavedAddressId = max(0, (int)($_GET['saved_address'] ?? 0));
-
-if ($preferredSavedAddressId > 0) {
-    $preferredSavedAddress = $addressModel->getByIdForUser($userId, $preferredSavedAddressId);
-    if ($preferredSavedAddress) {
-        $selectedAddressId = (int)$preferredSavedAddress['id'];
-        $selectedAddress = $preferredSavedAddress;
-    }
-}
-
-$hasSavedAddress = !empty($savedAddresses);
-
-$values = [
-    'full_name' => (string)($selectedAddress['receiver_name'] ?? $currentUser['full_name'] ?? ''),
-    'email' => (string)($currentUser['email'] ?? ''),
-    'phone' => (string)($selectedAddress['phone'] ?? $currentUser['phone'] ?? ''),
-    'province' => (string)($selectedAddress['province'] ?? ''),
-    'district' => (string)($selectedAddress['district'] ?? ''),
-    'ward' => (string)($selectedAddress['ward'] ?? ''),
-    'address_line' => (string)($selectedAddress['address_line'] ?? ''),
-    'note' => '',
-    'payment_method' => 'cod',
-    'save_as_default' => $hasSavedAddress ? '0' : '1',
-];
-$errors = [];
-$quickDraft = $_SESSION['checkout_quick_draft'] ?? null;
-
-if (is_array($quickDraft)) {
-    unset($_SESSION['checkout_quick_draft']);
-    $values['email'] = (string)($quickDraft['email'] ?? $values['email']);
-    $values['note'] = (string)($quickDraft['note'] ?? $values['note']);
-    $values['payment_method'] = (string)($quickDraft['payment_method'] ?? $values['payment_method']);
-    $values['save_as_default'] = !empty($quickDraft['save_as_default']) ? '1' : '0';
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    foreach ($values as $key => $_) {
-        $values[$key] = trim((string)($_POST[$key] ?? ''));
-    }
-
-    $values['save_as_default'] = !empty($_POST['save_as_default']) ? '1' : '0';
-
-    $action = (string)($_POST['action'] ?? 'place_order');
-    $selectedAddressId = max(0, (int)($_POST['selected_address_id'] ?? 0));
-    $selectedAddress = $selectedAddressId > 0 ? $addressModel->getByIdForUser($userId, $selectedAddressId) : null;
-
-    if ($selectedAddress) {
-        $values['full_name'] = (string)$selectedAddress['receiver_name'];
-        $values['phone'] = (string)$selectedAddress['phone'];
-        $values['province'] = (string)$selectedAddress['province'];
-        $values['district'] = (string)$selectedAddress['district'];
-        $values['ward'] = (string)($selectedAddress['ward'] ?? '');
-        $values['address_line'] = (string)$selectedAddress['address_line'];
-    }
-
-    if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
-        $errors['general'] = 'Phiên làm việc đã hết hạn. Vui lòng thử lại.';
-    } else {
-        if ($action === 'quick_save_address') {
-            if ($selectedAddress) {
-                $errors['address_book'] = 'Địa chỉ này đã có trong sổ địa chỉ. Hãy chọn "Nhập địa chỉ mới" nếu bạn muốn lưu thêm.';
-            } else {
-                $quickAddressPayload = checkout_collect_address_payload($_POST);
-                $errors = array_merge($errors, checkout_validate_quick_address($quickAddressPayload));
-
-                if (empty($errors)) {
-                    try {
-                        $_SESSION['checkout_quick_draft'] = [
-                            'email' => $values['email'],
-                            'note' => $values['note'],
-                            'payment_method' => $values['payment_method'],
-                            'save_as_default' => $values['save_as_default'],
-                        ];
-
-                        $makeDefault = $values['save_as_default'] === '1';
-                        $newAddressId = $addressModel->createForUser($userId, $quickAddressPayload, $makeDefault);
-                        set_flash('success', $makeDefault
-                            ? 'Đã lưu nhanh địa chỉ vào hồ sơ và đặt làm mặc định.'
-                            : 'Đã lưu nhanh địa chỉ vào hồ sơ. Bạn có thể dùng lại cho các lần mua sau.'
-                        );
-                        redirect('checkout.php?saved_address=' . urlencode((string)$newAddressId) . '#saved-addresses');
-                    } catch (Throwable $e) {
-                        unset($_SESSION['checkout_quick_draft']);
-                        $errors['address_book'] = 'Không thể lưu nhanh địa chỉ lúc này. Vui lòng thử lại.';
-                    }
-                }
-            }
-        } else {
-            $checkoutService = new CheckoutService();
-            $result = $checkoutService->placeOrder($userId, $_POST);
-
-            if (!empty($result['success'])) {
-                $orderId = max(0, (int)($result['order_id'] ?? 0));
-                $isOnlineMock = (string)($_POST['payment_method'] ?? '') === 'online_mock';
-
-                if ($isOnlineMock && $orderId > 0) {
-                    set_flash('success', 'Đơn hàng đã được tạo. Vui lòng xác nhận sau khi bạn hoàn tất chuyển khoản giả lập.');
-                    redirect('order-detail.php?id=' . urlencode((string)$orderId) . '#payment-confirmation');
-                }
-
-                set_flash('success', 'Đặt hàng thành công. Đơn của bạn đã được tạo.');
-                redirect('orders.php');
-            }
-
-            if (!empty($result['cart_changed'])) {
-                set_flash('error', (string)($result['errors']['general'] ?? 'Giỏ hàng vừa thay đổi tồn kho. Vui lòng kiểm tra lại trước khi đặt đơn.'));
-                redirect('cart.php');
-            }
-
-            $errors = $result['errors'] ?? ['general' => 'Không thể thanh toán lúc này.'];
-        }
-    }
-}
-
-$addressMap = [];
-foreach ($savedAddresses as $address) {
-    $addressMap[(int)$address['id']] = [
-        'id' => (int)$address['id'],
-        'receiver_name' => (string)$address['receiver_name'],
-        'phone' => (string)$address['phone'],
-        'province' => (string)$address['province'],
-        'district' => (string)$address['district'],
-        'ward' => (string)($address['ward'] ?? ''),
-        'address_line' => (string)$address['address_line'],
-    ];
-}
-
-$paymentOptions = [
-    [
-        'value' => 'cod',
-        'title' => 'Thanh toán khi nhận hàng',
-        'description' => 'Phù hợp với đơn cần xác nhận thủ công và giao tận nơi.',
-        'icon' => 'local_shipping',
-    ],
-    [
-        'value' => 'online_mock',
-        'title' => 'Chuyển khoản giả lập',
-        'description' => 'Nhận thông tin tài khoản mô phỏng và bấm "Tôi đã thanh toán" sau khi chuyển khoản.',
-        'icon' => 'credit_card',
-    ],
-];
-
-$pageTitle = 'Thanh toán - GreenSpace';
-$currentPage = '';
 
 include 'includes/header.php';
 ?>
@@ -431,10 +233,10 @@ include 'includes/header.php';
                                             </span>
                                             <div class="flex-1">
                                                 <div class="flex flex-wrap items-center justify-between gap-2">
-                                                    <span class="font-bold text-text-main dark:text-white"><?= clean($option['title']) ?></span>
+                                                    <span class="font-bold text-text-main dark:text-white"><?= clean((string)$option['label']) ?></span>
                                                     <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#456a57] shadow-sm">Khả dụng</span>
                                                 </div>
-                                                <p class="mt-2 text-sm leading-6 text-text-secondary"><?= clean($option['description']) ?></p>
+                                                <p class="mt-2 text-sm leading-6 text-text-secondary"><?= clean((string)$option['description']) ?></p>
                                             </div>
                                         </div>
                                     </div>
@@ -500,8 +302,8 @@ include 'includes/header.php';
                         <div class="mt-6 rounded-[1.5rem] bg-[#f6fbf7] px-4 py-4 text-sm text-[#456a57]">
                             <p class="font-semibold text-[#102118]">Lưu ý thanh toán</p>
                             <p class="mt-2 leading-6">
-                                Đơn dưới 500.000đ sẽ cộng thêm 30.000đ phí vận chuyển. Nếu chọn <strong>Chuyển khoản giả lập</strong>,
-                                đơn sẽ ở trạng thái chưa thanh toán đến khi bạn bấm nút xác nhận trên trang chi tiết đơn.
+                                Đơn dưới 500.000đ sẽ cộng thêm 30.000đ phí vận chuyển. Với các phương thức thanh toán online,
+                                đơn sẽ ở trạng thái chưa thanh toán cho đến khi hệ thống nhận xác nhận từ bạn hoặc callback từ cổng thanh toán.
                             </p>
                         </div>
                     </div>

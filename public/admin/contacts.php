@@ -7,6 +7,7 @@ if (empty($GLOBALS['mvc_template_rendering'])) {
 
 require_once __DIR__ . '/bootstrap.php';
 
+if (!function_exists('admin_contacts_query')) {
 function admin_contacts_query(array $params): string {
     $filtered = [];
 
@@ -29,7 +30,9 @@ function admin_contacts_query(array $params): string {
     $query = http_build_query($filtered);
     return $query !== '' ? '?' . $query : '';
 }
+}
 
+if (!function_exists('admin_contact_render_state_fields')) {
 function admin_contact_render_state_fields(array $params): void {
     foreach ($params as $key => $value) {
         if ($value === null || $value === '') {
@@ -39,13 +42,16 @@ function admin_contact_render_state_fields(array $params): void {
         echo '<input type="hidden" name="' . clean((string)$key) . '" value="' . clean((string)$value) . '">';
     }
 }
+    }
 
-function admin_contact_status_meta(string $status): array {
+    if (!function_exists('admin_contact_status_meta')) {
+    function admin_contact_status_meta(string $status): array {
     return match ($status) {
         'resolved' => ['label' => 'Đã xử lý', 'class' => 'bg-[#edf8f1] text-[#2e9b63]'],
         'in_progress' => ['label' => 'Đang xử lý', 'class' => 'bg-[#eef4ff] text-[#3758c7]'],
         default => ['label' => 'Mới', 'class' => 'bg-[#fff7e8] text-[#b7791f]'],
     };
+}
 }
 
 render_admin_header('Liên hệ khách hàng');

@@ -1,6 +1,11 @@
 <?php
+if (empty($GLOBALS['mvc_template_rendering'])) {
+    require_once __DIR__ . '/../../config/config.php';
+    (new AdminPageController())->orders()->send();
+    return;
+}
+
 require_once __DIR__ . '/bootstrap.php';
-require_admin_permission('orders.manage', 'orders.php');
 
 function admin_orders_query(array $params): string {
     $filtered = [];
@@ -78,129 +83,6 @@ function admin_payment_status_options(): array {
     ];
 }
 
-$orderModel = new Order();
-
-if (($_GET['ajax'] ?? '') === 'pending_count') {
-    header('Content-Type: application/json; charset=UTF-8');
-    echo json_encode([
-        'pending_count' => $orderModel->countAdminOnlineMockOrdersByPaymentStatus('pending_review'),
-    ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
-    exit();
-}
-
-$orderStatusOptions = admin_order_status_options();
-$paymentStatusOptions = admin_payment_status_options();
-
-$search = trim((string)($_GET['q'] ?? ''));
-$orderStatusFilter = (string)($_GET['order_status'] ?? 'all');
-$paymentStatusFilter = (string)($_GET['payment_status'] ?? 'all');
-$page = max(1, (int)($_GET['page'] ?? 1));
-$viewId = max(0, (int)($_GET['view'] ?? 0));
-$perPage = 12;
-
-if (!isset($orderStatusOptions[$orderStatusFilter])) {
-    $orderStatusFilter = 'all';
-}
-
-if (!isset($paymentStatusOptions[$paymentStatusFilter])) {
-    $paymentStatusFilter = 'all';
-}
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $returnState = [
-        'q' => trim((string)($_POST['q'] ?? '')),
-        'order_status' => (string)($_POST['order_status'] ?? 'all'),
-        'payment_status' => (string)($_POST['payment_status'] ?? 'all'),
-        'page' => max(1, (int)($_POST['page'] ?? 1)),
-        'view' => max(0, (int)($_POST['view'] ?? 0)),
-    ];
-
-    if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
-        set_flash('error', 'Phiên làm việc đã hết hạn. Vui lòng thử lại.');
-        redirect('orders.php' . admin_orders_query($returnState));
-    }
-
-    $action = (string)($_POST['action'] ?? '');
-    $targetOrderId = max(0, (int)($_POST['order_id'] ?? 0));
-    if ($targetOrderId > 0) {
-        $returnState['view'] = $targetOrderId;
-    }
-
-    if ($action === 'update_order_status') {
-        $nextStatus = (string)($_POST['next_status'] ?? '');
-        $updated = $targetOrderId > 0 ? $orderModel->updateAdminOrderStatus($targetOrderId, $nextStatus) : false;
-
-        if ($updated) {
-            $statusMeta = admin_order_status_meta($nextStatus);
-            set_flash('success', 'Đã cập nhật trạng thái đơn hàng sang "' . $statusMeta['label'] . '".');
-        } else {
-            set_flash('error', $orderModel->getLastErrorMessage() ?? 'Không thể cập nhật trạng thái đơn hàng lúc này.');
-        }
-
-        redirect('orders.php' . admin_orders_query($returnState) . '#order-detail');
-    }
-
-    if ($action === 'approve_online_mock_payment') {
-        $approved = $targetOrderId > 0 ? $orderModel->approveOnlineMockPaymentByAdmin($targetOrderId) : false;
-
-        if ($approved) {
-            set_flash('success', 'Đã duyệt chuyển khoản giả lập và cập nhật trạng thái thanh toán.');
-        } else {
-            set_flash('error', $orderModel->getLastErrorMessage() ?? 'Không thể duyệt thanh toán lúc này.');
-        }
-
-        redirect('orders.php' . admin_orders_query($returnState) . '#order-detail');
-    }
-
-    if ($action === 'reject_online_mock_payment') {
-        $reason = trim((string)($_POST['reject_reason'] ?? ''));
-
-        if ($reason === '') {
-            set_flash('error', 'Vui lòng nhập lý do từ chối duyệt.');
-            redirect('orders.php' . admin_orders_query($returnState) . '#order-detail');
-        }
-
-        $rejected = $targetOrderId > 0 ? $orderModel->rejectOnlineMockPaymentByAdmin($targetOrderId, $reason) : false;
-
-        if ($rejected) {
-            set_flash('success', 'Đã từ chối yêu cầu chuyển khoản giả lập.');
-        } else {
-            set_flash('error', $orderModel->getLastErrorMessage() ?? 'Không thể từ chối thanh toán lúc này.');
-        }
-
-        redirect('orders.php' . admin_orders_query($returnState) . '#order-detail');
-    }
-}
-
-$stats = $orderModel->getAdminStats();
-$totalOrders = $orderModel->getAdminTotal($search, $orderStatusFilter, $paymentStatusFilter);
-$totalPages = max(1, (int)ceil($totalOrders / $perPage));
-$page = min($page, $totalPages);
-$offset = ($page - 1) * $perPage;
-$orders = $orderModel->getAdminList($search, $orderStatusFilter, $paymentStatusFilter, $perPage, $offset);
-
-$viewOrder = null;
-if ($viewId > 0) {
-    $viewOrder = $orderModel->getAdminDetailById($viewId);
-    if (!$viewOrder) {
-        set_flash('error', 'Không tìm thấy đơn hàng cần xem chi tiết.');
-        redirect('orders.php' . admin_orders_query([
-            'q' => $search,
-            'order_status' => $orderStatusFilter,
-            'payment_status' => $paymentStatusFilter,
-            'page' => $page,
-        ]));
-    }
-}
-
-$currentState = [
-    'q' => $search,
-    'order_status' => $orderStatusFilter,
-    'payment_status' => $paymentStatusFilter,
-    'page' => $page,
-    'view' => $viewId,
-];
-
 render_admin_header('Quản lý đơn hàng');
 ?>
 
@@ -227,6 +109,184 @@ render_admin_header('Quản lý đơn hàng');
             <p class="mt-2 text-sm text-[#6e8d7b]">Đơn chuyển khoản giả lập cần admin xác nhận.</p>
         </article>
     </section>
+
+    <?php if (!empty($commerceSummary)): ?>
+        <section class="rounded-[1.75rem] border border-[#d9e9de] bg-white p-6 shadow-sm">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                    <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Kinh doanh</p>
+                    <h2 class="mt-2 text-2xl font-extrabold text-[#102118]">Thống kê sản phẩm và khách đã mua</h2>
+                    <p class="mt-2 text-sm text-[#6e8d7b]">Theo dõi nhanh số khách phát sinh mua hàng, tổng sản phẩm đã bán và nhóm mặt hàng đang tạo doanh thu tốt nhất.</p>
+                </div>
+                <a href="dashboard.php" class="inline-flex items-center rounded-full border border-[#d9e9de] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">
+                    Mở dashboard tổng quan
+                </a>
+            </div>
+
+            <div class="mt-6 grid gap-4 xl:grid-cols-3">
+                <?php foreach ($commerceSummary as $card): ?>
+                    <article class="rounded-[1.35rem] border border-[#edf4ef] bg-[#f8fbf9] p-5">
+                        <div class="flex items-start justify-between gap-4">
+                            <div>
+                                <p class="text-sm font-semibold text-[#587766]"><?= clean($card['label']) ?></p>
+                                <p class="mt-3 text-3xl font-extrabold text-[#102118]">
+                                    <?= !empty($card['currency']) ? format_currency((float)$card['value']) : clean((string)$card['value']) ?>
+                                </p>
+                                <p class="mt-2 text-sm text-[#6e8d7b]"><?= clean($card['hint']) ?></p>
+                            </div>
+                            <span class="flex size-11 items-center justify-center rounded-2xl bg-white text-[#2e9b63] shadow-sm">
+                                <span class="material-symbols-outlined"><?= clean($card['icon']) ?></span>
+                            </span>
+                        </div>
+                    </article>
+                <?php endforeach; ?>
+            </div>
+
+            <div class="mt-6 grid gap-6 xl:grid-cols-[1fr_1fr]">
+                <article class="rounded-[1.5rem] border border-[#edf4ef] bg-[#102118] p-5 text-white">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-white/65">Khách hàng</p>
+                            <h3 class="mt-2 text-xl font-extrabold">Khách mua nhiều nhất</h3>
+                        </div>
+                        <a href="users.php" class="text-sm font-semibold text-white/80 transition-colors hover:text-white">Quản lý user</a>
+                    </div>
+
+                    <?php if (empty($topCustomers)): ?>
+                        <div class="mt-5 rounded-[1.25rem] bg-white/10 px-4 py-6 text-sm text-white/80">
+                            Chưa có dữ liệu khách mua hàng để thống kê.
+                        </div>
+                    <?php else: ?>
+                        <div class="mt-5 space-y-3">
+                            <?php foreach (array_slice($topCustomers, 0, 4) as $customer): ?>
+                                <article class="rounded-[1.25rem] bg-white/10 px-4 py-4">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p class="font-bold"><?= clean($customer['full_name'] ?: $customer['username']) ?></p>
+                                            <p class="mt-1 text-sm text-white/70"><?= clean($customer['email']) ?></p>
+                                        </div>
+                                        <span class="rounded-full bg-white/15 px-3 py-1 text-xs font-semibold">
+                                            <?= clean((string)$customer['completed_order_count']) ?> đơn
+                                        </span>
+                                    </div>
+                                    <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-white/80">
+                                        <span>Đã mua: <strong class="text-white"><?= clean((string)$customer['units_bought']) ?></strong> SP</span>
+                                        <span>Doanh thu: <strong class="text-white"><?= format_currency((float)$customer['gross_revenue']) ?></strong></span>
+                                    </div>
+                                </article>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </article>
+
+                <article class="rounded-[1.5rem] border border-[#edf4ef] p-5">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Sản phẩm</p>
+                            <h3 class="mt-2 text-xl font-extrabold text-[#102118]">Mặt hàng bán chạy</h3>
+                        </div>
+                        <a href="products.php" class="text-sm font-semibold text-[#2e9b63] transition-colors hover:text-[#22784d]">Quản lý sản phẩm</a>
+                    </div>
+
+                    <?php if (empty($topProducts)): ?>
+                        <div class="mt-5 rounded-[1.25rem] border border-dashed border-[#d9e9de] px-4 py-6 text-center text-sm text-[#6e8d7b]">
+                            Chưa có dữ liệu bán hàng để xếp hạng sản phẩm.
+                        </div>
+                    <?php else: ?>
+                        <div class="mt-5 space-y-3">
+                            <?php foreach (array_slice($topProducts, 0, 4) as $product): ?>
+                                <article class="rounded-[1.25rem] border border-[#edf4ef] bg-[#f8fbf9] px-4 py-4">
+                                    <div class="flex items-start justify-between gap-3">
+                                        <div>
+                                            <p class="font-bold text-[#102118]"><?= clean($product['name']) ?></p>
+                                            <p class="mt-1 text-sm text-[#6e8d7b]">Khách mua: <strong class="text-[#102118]"><?= clean((string)$product['customer_count']) ?></strong></p>
+                                        </div>
+                                        <span class="rounded-full bg-white px-3 py-1 text-xs font-semibold text-[#456a57] shadow-sm">
+                                            <?= clean((string)$product['order_count']) ?> đơn
+                                        </span>
+                                    </div>
+                                    <div class="mt-4 flex flex-wrap items-center gap-4 text-sm text-[#6e8d7b]">
+                                        <span>Đã bán: <strong class="text-[#102118]"><?= clean((string)$product['units_sold']) ?></strong> SP</span>
+                                        <span>Doanh thu: <strong class="text-[#102118]"><?= format_currency((float)$product['gross_revenue']) ?></strong></span>
+                                        <span>Tồn kho: <strong class="text-[#102118]"><?= clean((string)$product['stock']) ?></strong></span>
+                                    </div>
+                                </article>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </article>
+            </div>
+        </section>
+    <?php endif; ?>
+
+    <?php if (!empty($commerceTrends['last_7_days']['points'] ?? []) || !empty($commerceTrends['last_30_days']['points'] ?? []) || !empty($commerceTrends['last_12_months']['points'] ?? [])): ?>
+        <section class="rounded-[1.75rem] border border-[#d9e9de] bg-white p-6 shadow-sm">
+            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                    <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Biểu đồ</p>
+                    <h2 class="mt-2 text-2xl font-extrabold text-[#102118]">Doanh thu và số lượng bán theo ngày/tháng</h2>
+                    <p class="mt-2 text-sm text-[#6e8d7b]">Doanh thu chỉ tính đơn đã thanh toán và không bị hủy. Số lượng bán tính trên các đơn không bị hủy.</p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <div class="inline-flex rounded-full border border-[#d9e9de] bg-[#f8fbf9] p-1">
+                        <button type="button" data-trend-period="last_7_days" class="trend-period-button rounded-full px-4 py-2 text-sm font-semibold text-[#102118] transition-colors">
+                            7 ngày
+                        </button>
+                        <button type="button" data-trend-period="last_30_days" class="trend-period-button rounded-full px-4 py-2 text-sm font-semibold text-[#587766] transition-colors">
+                            30 ngày
+                        </button>
+                    </div>
+                    <div class="inline-flex rounded-full border border-[#d9e9de] bg-[#f8fbf9] p-1">
+                        <button type="button" data-trend-period="last_12_months" class="trend-period-button rounded-full px-4 py-2 text-sm font-semibold text-[#587766] transition-colors">
+                            12 tháng
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 grid gap-4 lg:grid-cols-3">
+                <article class="rounded-[1.35rem] border border-[#edf4ef] bg-[#f8fbf9] p-5">
+                    <p class="text-sm font-semibold text-[#587766]">Tổng doanh thu kỳ đang xem</p>
+                    <p id="trendRevenueTotal" class="mt-3 text-3xl font-extrabold text-[#102118]">0 đ</p>
+                    <p id="trendRangeLabel" class="mt-2 text-sm text-[#6e8d7b]">Đang tải khoảng thời gian...</p>
+                </article>
+                <article class="rounded-[1.35rem] border border-[#edf4ef] bg-[#f8fbf9] p-5">
+                    <p class="text-sm font-semibold text-[#587766]">Số lượng bán trong kỳ</p>
+                    <p id="trendUnitsTotal" class="mt-3 text-3xl font-extrabold text-[#102118]">0</p>
+                    <p class="mt-2 text-sm text-[#6e8d7b]">Tổng số sản phẩm đã bán theo kỳ đang chọn.</p>
+                </article>
+                <article class="rounded-[1.35rem] border border-[#edf4ef] bg-[#102118] p-5 text-white">
+                    <p class="text-sm font-semibold uppercase tracking-[0.18em] text-white/65">Ghi chú</p>
+                    <h3 id="trendPeriodTitle" class="mt-2 text-xl font-extrabold">Đang xem 7 ngày gần nhất</h3>
+                    <p class="mt-3 text-sm leading-6 text-white/80">Biểu đồ hỗ trợ so sánh nhịp tăng trưởng doanh thu với lượng hàng bán ra để mình phát hiện nhanh ngày cao điểm hoặc tháng chững lại.</p>
+                </article>
+            </div>
+
+            <div class="mt-6 grid gap-6 xl:grid-cols-2">
+                <article class="rounded-[1.5rem] border border-[#edf4ef] p-5">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Doanh thu</p>
+                            <h3 class="mt-2 text-xl font-extrabold text-[#102118]">Xu hướng doanh thu</h3>
+                        </div>
+                        <span class="rounded-full bg-[#eef6f1] px-3 py-1 text-xs font-semibold text-[#456a57]">Đơn đã paid</span>
+                    </div>
+                    <div id="revenueTrendChart" class="mt-5"></div>
+                </article>
+
+                <article class="rounded-[1.5rem] border border-[#edf4ef] p-5">
+                    <div class="flex items-center justify-between gap-3">
+                        <div>
+                            <p class="text-sm font-semibold uppercase tracking-[0.18em] text-[#2e9b63]">Sản lượng</p>
+                            <h3 class="mt-2 text-xl font-extrabold text-[#102118]">Xu hướng số lượng bán</h3>
+                        </div>
+                        <span class="rounded-full bg-[#eef4ff] px-3 py-1 text-xs font-semibold text-[#3758c7]">Đơn không hủy</span>
+                    </div>
+                    <div id="unitsTrendChart" class="mt-5"></div>
+                </article>
+            </div>
+        </section>
+    <?php endif; ?>
 
     <section class="rounded-[1.75rem] border border-[#d9e9de] bg-white p-6 shadow-sm">
         <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -376,7 +436,14 @@ render_admin_header('Quản lý đơn hàng');
                 <?php
                 $viewPaymentMeta = admin_order_payment_status_meta((string)$viewOrder['payment_status']);
                 $viewOrderMeta = admin_order_status_meta((string)$viewOrder['order_status']);
-                $canReviewPayment = (string)$viewOrder['payment_method'] === 'online_mock' && (string)$viewOrder['payment_status'] === 'pending_review';
+                $viewPaymentMethod = (string)$viewOrder['payment_method'];
+                $isCancelledOrder = (string)$viewOrder['order_status'] === 'cancelled';
+                $canReviewPayment = payment_method_requires_manual_review($viewPaymentMethod)
+                    && !$isCancelledOrder
+                    && (string)$viewOrder['payment_status'] === 'pending_review';
+                $orderStatusLockedByPayment = payment_method_is_online($viewPaymentMethod)
+                    && (string)$viewOrder['payment_status'] !== 'paid';
+                $currentOrderStatus = (string)$viewOrder['order_status'];
                 ?>
                 <div class="flex flex-wrap items-start justify-between gap-4">
                     <div>
@@ -402,7 +469,7 @@ render_admin_header('Quản lý đơn hàng');
                         <p class="text-xs font-semibold uppercase tracking-[0.16em] text-[#6e8d7b]">Tổng quan</p>
                         <div class="mt-3 space-y-2 text-sm text-[#456a57]">
                             <p>Tổng tiền: <strong class="text-[#102118]"><?= format_currency((float)$viewOrder['total_amount']) ?></strong></p>
-                            <p>Thanh toán: <strong class="text-[#102118]"><?= clean((string)$viewOrder['payment_method']) ?></strong></p>
+                            <p>Thanh toán: <strong class="text-[#102118]"><?= clean(payment_method_label($viewPaymentMethod)) ?></strong></p>
                             <p>Tài khoản: <strong class="text-[#102118]"><?= clean((string)($viewOrder['account_full_name'] ?: $viewOrder['username'])) ?></strong></p>
                             <p>Số mặt hàng: <strong class="text-[#102118]"><?= clean((string)count($viewOrder['items'])) ?></strong></p>
                         </div>
@@ -433,9 +500,17 @@ render_admin_header('Quản lý đơn hàng');
                             <select id="next_status" name="next_status" class="w-full rounded-2xl border border-[#d9e9de] px-4 py-3 text-sm text-[#102118] focus:border-[#2e9b63] focus:ring-[#2e9b63]">
                                 <?php foreach (admin_order_status_options() as $value => $label): ?>
                                     <?php if ($value === 'all') { continue; } ?>
-                                    <option value="<?= clean($value) ?>" <?= (string)$viewOrder['order_status'] === $value ? 'selected' : '' ?>><?= clean($label) ?></option>
+                                    <?php
+                                    $optionLockedByPayment = $orderStatusLockedByPayment
+                                        && $value !== 'cancelled'
+                                        && $value !== $currentOrderStatus;
+                                    ?>
+                                    <option value="<?= clean($value) ?>" <?= $currentOrderStatus === $value ? 'selected' : '' ?> <?= $optionLockedByPayment ? 'disabled' : '' ?>><?= clean($label) ?></option>
                                 <?php endforeach; ?>
                             </select>
+                            <?php if ($orderStatusLockedByPayment): ?>
+                                <p class="text-xs text-[#b7791f]">Đơn thanh toán online chưa ở trạng thái "Đã thanh toán" chỉ nên giữ nguyên trạng thái hiện tại hoặc chuyển sang "Đã hủy" để đóng đơn và hoàn kho.</p>
+                            <?php endif; ?>
                         </div>
                         <button type="submit" class="inline-flex items-center justify-center rounded-2xl bg-[#102118] px-5 py-3 text-sm font-semibold text-white transition-colors hover:bg-[#1f3b2d]">
                             Cập nhật trạng thái
@@ -518,8 +593,9 @@ render_admin_header('Quản lý đơn hàng');
                                 <article class="rounded-[1rem] border border-[#edf4ef] p-4">
                                     <div class="flex flex-wrap items-start justify-between gap-3">
                                         <div>
-                                            <p class="font-semibold text-[#102118]"><?= clean((string)$payment['provider']) ?></p>
-                                            <p class="mt-1 text-sm text-[#6e8d7b]">Mã GD: <?= clean((string)($payment['transaction_code'] ?: 'Chưa có')) ?></p>
+                                            <p class="font-semibold text-[#102118]"><?= clean(payment_method_label((string)$payment['provider'])) ?></p>
+                                            <p class="mt-1 text-sm text-[#6e8d7b]">Provider key: <?= clean((string)$payment['provider']) ?></p>
+                                            <p class="text-sm text-[#6e8d7b]">Mã GD: <?= clean((string)($payment['transaction_code'] ?: 'Chưa có')) ?></p>
                                         </div>
                                         <span class="rounded-full px-3 py-1 text-xs font-semibold <?= clean($paymentMeta['class']) ?>"><?= clean($paymentMeta['label']) ?></span>
                                     </div>
@@ -541,7 +617,208 @@ render_admin_header('Quản lý đơn hàng');
 <?php render_admin_footer(); ?>
 
 <script>
+const commerceTrendData = <?= json_encode($commerceTrends, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) ?>;
 let currentPendingCount = <?= (int)$stats['pending_payment_reviews'] ?>;
+
+const trendPeriodButtons = Array.from(document.querySelectorAll('[data-trend-period]'));
+const trendRevenueTotal = document.getElementById('trendRevenueTotal');
+const trendUnitsTotal = document.getElementById('trendUnitsTotal');
+const trendRangeLabel = document.getElementById('trendRangeLabel');
+const trendPeriodTitle = document.getElementById('trendPeriodTitle');
+const revenueTrendChart = document.getElementById('revenueTrendChart');
+const unitsTrendChart = document.getElementById('unitsTrendChart');
+
+const currencyFormatter = new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+});
+const numberFormatter = new Intl.NumberFormat('vi-VN');
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function buildRevenueChartSvg(points) {
+    if (!points.length) {
+        return '<div class="rounded-[1.25rem] border border-dashed border-[#d9e9de] px-4 py-10 text-center text-sm text-[#6e8d7b]">Chưa có dữ liệu doanh thu trong kỳ này.</div>';
+    }
+
+    const width = 760;
+    const height = 280;
+    const paddingLeft = 42;
+    const paddingRight = 20;
+    const paddingTop = 18;
+    const paddingBottom = 48;
+    const plotWidth = width - paddingLeft - paddingRight;
+    const plotHeight = height - paddingTop - paddingBottom;
+    const values = points.map((point) => Number(point.revenue || 0));
+    const maxValue = Math.max(...values, 1);
+    const xStep = points.length > 1 ? plotWidth / (points.length - 1) : 0;
+
+    const linePoints = points.map((point, index) => {
+        const x = paddingLeft + xStep * index;
+        const y = paddingTop + plotHeight - ((Number(point.revenue || 0) / maxValue) * plotHeight);
+        return { x, y, point };
+    });
+
+    const polyline = linePoints.map((item) => `${item.x},${item.y}`).join(' ');
+    const areaPath = [
+        `M ${linePoints[0].x} ${paddingTop + plotHeight}`,
+        ...linePoints.map((item) => `L ${item.x} ${item.y}`),
+        `L ${linePoints[linePoints.length - 1].x} ${paddingTop + plotHeight}`,
+        'Z',
+    ].join(' ');
+
+    const gridLines = [0, 0.25, 0.5, 0.75, 1].map((step) => {
+        const y = paddingTop + (plotHeight * step);
+        const labelValue = maxValue - (maxValue * step);
+
+        return `
+            <g>
+                <line x1="${paddingLeft}" y1="${y}" x2="${width - paddingRight}" y2="${y}" stroke="#e5efe8" stroke-dasharray="4 6" />
+                <text x="${paddingLeft - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#6e8d7b">${escapeHtml(numberFormatter.format(Math.round(labelValue)))}</text>
+            </g>
+        `;
+    }).join('');
+
+    const dots = linePoints.map((item) => `
+        <g>
+            <circle cx="${item.x}" cy="${item.y}" r="4.5" fill="#2e9b63" />
+            <title>${escapeHtml(item.point.label)}: ${escapeHtml(currencyFormatter.format(Number(item.point.revenue || 0)))}</title>
+        </g>
+    `).join('');
+
+    const labels = linePoints.map((item) => `
+        <text x="${item.x}" y="${height - 18}" text-anchor="middle" font-size="11" fill="#6e8d7b">${escapeHtml(item.point.short_label)}</text>
+    `).join('');
+
+    return `
+        <svg viewBox="0 0 ${width} ${height}" class="w-full overflow-visible">
+            <defs>
+                <linearGradient id="revenueAreaGradient" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stop-color="#7bd4a4" stop-opacity="0.45"></stop>
+                    <stop offset="100%" stop-color="#7bd4a4" stop-opacity="0.02"></stop>
+                </linearGradient>
+            </defs>
+            ${gridLines}
+            <path d="${areaPath}" fill="url(#revenueAreaGradient)"></path>
+            <polyline points="${polyline}" fill="none" stroke="#2e9b63" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></polyline>
+            ${dots}
+            ${labels}
+        </svg>
+    `;
+}
+
+function buildUnitsChartSvg(points) {
+    if (!points.length) {
+        return '<div class="rounded-[1.25rem] border border-dashed border-[#d9e9de] px-4 py-10 text-center text-sm text-[#6e8d7b]">Chưa có dữ liệu số lượng bán trong kỳ này.</div>';
+    }
+
+    const width = 760;
+    const height = 280;
+    const paddingLeft = 42;
+    const paddingRight = 20;
+    const paddingTop = 18;
+    const paddingBottom = 48;
+    const plotWidth = width - paddingLeft - paddingRight;
+    const plotHeight = height - paddingTop - paddingBottom;
+    const values = points.map((point) => Number(point.units || 0));
+    const maxValue = Math.max(...values, 1);
+    const segmentWidth = plotWidth / Math.max(points.length, 1);
+    const barWidth = Math.min(28, Math.max(10, segmentWidth * 0.55));
+
+    const gridLines = [0, 0.25, 0.5, 0.75, 1].map((step) => {
+        const y = paddingTop + (plotHeight * step);
+        const labelValue = maxValue - (maxValue * step);
+
+        return `
+            <g>
+                <line x1="${paddingLeft}" y1="${y}" x2="${width - paddingRight}" y2="${y}" stroke="#e6ebff" stroke-dasharray="4 6" />
+                <text x="${paddingLeft - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#6e8d7b">${escapeHtml(numberFormatter.format(Math.round(labelValue)))}</text>
+            </g>
+        `;
+    }).join('');
+
+    const bars = points.map((point, index) => {
+        const barHeight = (Number(point.units || 0) / maxValue) * plotHeight;
+        const x = paddingLeft + (segmentWidth * index) + ((segmentWidth - barWidth) / 2);
+        const y = paddingTop + plotHeight - barHeight;
+        const labelX = paddingLeft + (segmentWidth * index) + (segmentWidth / 2);
+
+        return `
+            <g>
+                <rect x="${x}" y="${y}" width="${barWidth}" height="${Math.max(barHeight, 2)}" rx="10" fill="#5b7cff"></rect>
+                <title>${escapeHtml(point.label)}: ${escapeHtml(numberFormatter.format(Number(point.units || 0)))} sản phẩm</title>
+                <text x="${labelX}" y="${height - 18}" text-anchor="middle" font-size="11" fill="#6e8d7b">${escapeHtml(point.short_label)}</text>
+            </g>
+        `;
+    }).join('');
+
+    return `
+        <svg viewBox="0 0 ${width} ${height}" class="w-full overflow-visible">
+            ${gridLines}
+            ${bars}
+        </svg>
+    `;
+}
+
+function renderCommerceTrend(period) {
+    const trend = commerceTrendData?.[period];
+    if (!trend || !Array.isArray(trend.points)) {
+        return;
+    }
+
+    const points = trend.points;
+    const firstLabel = points[0]?.label || '';
+    const lastLabel = points[points.length - 1]?.label || '';
+    const periodTitle = `Đang xem ${trend.title || ''}`.trim();
+
+    if (trendRevenueTotal) {
+        trendRevenueTotal.textContent = currencyFormatter.format(Number(trend.summary?.revenue_total || 0));
+    }
+
+    if (trendUnitsTotal) {
+        trendUnitsTotal.textContent = numberFormatter.format(Number(trend.summary?.units_total || 0));
+    }
+
+    if (trendRangeLabel) {
+        trendRangeLabel.textContent = firstLabel && lastLabel ? `${firstLabel} - ${lastLabel}` : 'Không có dữ liệu';
+    }
+
+    if (trendPeriodTitle) {
+        trendPeriodTitle.textContent = periodTitle;
+    }
+
+    if (revenueTrendChart) {
+        revenueTrendChart.innerHTML = buildRevenueChartSvg(points);
+    }
+
+    if (unitsTrendChart) {
+        unitsTrendChart.innerHTML = buildUnitsChartSvg(points);
+    }
+
+    trendPeriodButtons.forEach((button) => {
+        const isActive = button.dataset.trendPeriod === period;
+        button.classList.toggle('bg-[#102118]', isActive);
+        button.classList.toggle('text-white', isActive);
+        button.classList.toggle('text-[#102118]', !isActive);
+        button.classList.toggle('text-[#587766]', !isActive);
+    });
+}
+
+trendPeriodButtons.forEach((button) => {
+    button.addEventListener('click', () => {
+        renderCommerceTrend(button.dataset.trendPeriod || 'last_7_days');
+    });
+});
+
+renderCommerceTrend('last_7_days');
 
 window.setInterval(async () => {
     try {

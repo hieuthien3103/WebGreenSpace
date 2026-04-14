@@ -1,44 +1,11 @@
 <?php
+if (empty($GLOBALS['mvc_template_rendering'])) {
+    require_once __DIR__ . '/../config/config.php';
+    (new AuthController())->signup()->send();
+    return;
+}
+
 require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../config/database.php';
-
-if (is_logged_in()) {
-    redirect('home.php');
-}
-
-$pageTitle = 'Đăng ký - GreenSpace';
-$currentPage = '';
-$errors = [];
-$old = [
-    'full_name' => '',
-    'username' => '',
-    'email' => '',
-    'phone' => '',
-];
-$redirectTarget = safe_redirect_target($_GET['redirect'] ?? $_POST['redirect'] ?? 'home.php');
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $old = [
-        'full_name' => trim((string)($_POST['full_name'] ?? '')),
-        'username' => trim((string)($_POST['username'] ?? '')),
-        'email' => trim((string)($_POST['email'] ?? '')),
-        'phone' => trim((string)($_POST['phone'] ?? '')),
-    ];
-
-    if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
-        $errors['general'] = 'Phiên làm việc đã hết hạn. Vui lòng thử lại.';
-    } else {
-        $authService = new AuthService();
-        $result = $authService->register($_POST);
-
-        if (!empty($result['success'])) {
-            set_flash('success', 'Tạo tài khoản thành công. Bạn đã được đăng nhập.');
-            redirect($redirectTarget);
-        }
-
-        $errors = $result['errors'] ?? ['general' => 'Không thể tạo tài khoản lúc này.'];
-    }
-}
 
 include 'includes/header.php';
 ?>
@@ -187,11 +154,11 @@ include 'includes/header.php';
                 <div class="grid gap-3 text-sm">
                     <div class="rounded-2xl bg-white/70 px-4 py-4 dark:bg-white/10">
                         <p class="font-semibold">Nhanh hơn khi đặt hàng</p>
-                        <p class="mt-1 text-[#41684f] dark:text-white/70">Thông tin liên hệ và địa chỉ sẽ dễ tiếp tục mở rộng ở các bước sau.</p>
+                        <p class="mt-1 text-[#41684f] dark:text-white/70">Lưu thông tin cơ bản để checkout thuận tiện hơn ở những lần mua tiếp theo.</p>
                     </div>
                     <div class="rounded-2xl bg-white/70 px-4 py-4 dark:bg-white/10">
-                        <p class="font-semibold">Theo dõi tài khoản dễ dàng</p>
-                        <p class="mt-1 text-[#41684f] dark:text-white/70">Hệ thống đang sử dụng bảng users hiện tại trong MySQL, không tạo schema riêng.</p>
+                        <p class="font-semibold">Quản lý đơn hàng dễ dàng</p>
+                        <p class="mt-1 text-[#41684f] dark:text-white/70">Theo dõi lịch sử mua sắm, trạng thái xử lý đơn và cập nhật hồ sơ của bạn trong một nơi.</p>
                     </div>
                 </div>
             </section>

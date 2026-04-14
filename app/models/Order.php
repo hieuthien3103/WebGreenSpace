@@ -7,6 +7,7 @@ class Order {
     private PDO $conn;
     private string $table = 'orders';
     private ?string $lastErrorMessage = null;
+    private static bool $stalePendingOrdersChecked = false;
 
     public function __construct() {
         $db = new Database();
@@ -25,6 +26,126 @@ class Order {
      */
     public function getLastErrorMessage(): ?string {
         return $this->lastErrorMessage;
+    }
+
+    /**
+     * Expire stale unpaid pending orders once per request.
+     *
+     * @return array{expired_orders: int, restored_units: int}
+     */
+    public function expireStalePendingOrdersIfNeeded(): array {
+        if (self::$stalePendingOrdersChecked) {
+            return [
+                'expired_orders' => 0,
+                'restored_units' => 0,
+            ];
+        }
+
+        self::$stalePendingOrdersChecked = true;
+        return $this->expireStalePendingOrders();
+    }
+
+    /**
+     * Expire stale unpaid pending orders and release their reserved inventory.
+     *
+     * @return array{expired_orders: int, restored_units: int}
+     */
+    public function expireStalePendingOrders(): array {
+        self::$stalePendingOrdersChecked = true;
+
+        $expiredOrders = 0;
+        $restoredUnits = 0;
+
+        $this->conn->beginTransaction();
+
+        try {
+            $staleStmt = $this->conn->prepare(
+                "SELECT id, order_number, payment_method
+                 FROM {$this->table}
+                 WHERE order_status = 'pending'
+                   AND payment_status = 'unpaid'
+                   AND (
+                       (payment_method = 'online_mock' AND created_at <= (CURRENT_TIMESTAMP - INTERVAL " . (int)ORDER_PENDING_ONLINE_MOCK_EXPIRY_MINUTES . " MINUTE))
+                       OR (payment_method = 'cod' AND created_at <= (CURRENT_TIMESTAMP - INTERVAL " . (int)ORDER_PENDING_COD_EXPIRY_MINUTES . " MINUTE))
+                   )
+                 ORDER BY created_at ASC
+                 FOR UPDATE"
+            );
+            $staleStmt->execute();
+
+            $staleOrders = $staleStmt->fetchAll();
+            if ($staleOrders === []) {
+                $this->conn->commit();
+                return [
+                    'expired_orders' => 0,
+                    'restored_units' => 0,
+                ];
+            }
+
+            $cancelOrderStmt = $this->conn->prepare(
+                "UPDATE {$this->table}
+                 SET order_status = 'cancelled',
+                     updated_at = CURRENT_TIMESTAMP
+                 WHERE id = :order_id
+                   AND order_status = 'pending'
+                   AND payment_status = 'unpaid'"
+            );
+            $paymentNoteStmt = $this->conn->prepare(
+                "UPDATE payments
+                 SET note = CONCAT(IFNULL(note, ''), IF(note IS NULL OR note = '', '', ' | '), :note)
+                 WHERE order_id = :order_id
+                 ORDER BY id DESC
+                 LIMIT 1"
+            );
+
+            foreach ($staleOrders as $order) {
+                $orderId = (int)$order['id'];
+                $orderNumber = (string)($order['order_number'] ?? '');
+                $paymentMethod = (string)($order['payment_method'] ?? 'cod');
+
+                $balances = $this->getOrderInventoryBalances($orderId);
+                $restoredUnits += array_sum($balances);
+
+                if (!$this->syncInventoryForOrderStatus($orderId, $orderNumber, 'cancelled')) {
+                    $this->conn->rollBack();
+                    return [
+                        'expired_orders' => 0,
+                        'restored_units' => 0,
+                    ];
+                }
+
+                $cancelOrderStmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);
+                $cancelOrderStmt->execute();
+
+                if ($cancelOrderStmt->rowCount() > 0) {
+                    $note = $paymentMethod === 'online_mock'
+                        ? 'He thong tu dong huy don online_mock qua han cho thanh toan.'
+                        : 'He thong tu dong huy don COD pending qua han xac nhan.';
+                    $paymentNoteStmt->bindValue(':note', $note, PDO::PARAM_STR);
+                    $paymentNoteStmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);
+                    $paymentNoteStmt->execute();
+                    $expiredOrders++;
+                }
+            }
+
+            $this->conn->commit();
+
+            return [
+                'expired_orders' => $expiredOrders,
+                'restored_units' => $restoredUnits,
+            ];
+        } catch (Throwable $e) {
+            if ($this->conn->inTransaction()) {
+                $this->conn->rollBack();
+            }
+
+            error_log('Order expireStalePendingOrders Error: ' . $e->getMessage());
+
+            return [
+                'expired_orders' => 0,
+                'restored_units' => 0,
+            ];
+        }
     }
 
     /**
@@ -99,6 +220,8 @@ class Order {
      * Get recent orders with item counts for a user.
      */
     public function getByUserId(int $userId, int $limit = 10): array {
+        $this->expireStalePendingOrdersIfNeeded();
+
         $query = "SELECT o.*,
                          COUNT(od.id) AS item_count,
                          COALESCE(SUM(od.quantity), 0) AS total_quantity
@@ -121,6 +244,8 @@ class Order {
      * Get paginated orders for one user with optional order status filter.
      */
     public function getPaginatedByUserId(int $userId, int $limit = 10, int $offset = 0, string $orderStatus = 'all'): array {
+        $this->expireStalePendingOrdersIfNeeded();
+
         $filterSql = '';
         if ($orderStatus !== 'all') {
             $filterSql = ' AND o.order_status = :order_status';
@@ -152,6 +277,8 @@ class Order {
      * Count orders for one user with optional order status filter.
      */
     public function countByUserId(int $userId, string $orderStatus = 'all'): int {
+        $this->expireStalePendingOrdersIfNeeded();
+
         $query = "SELECT COUNT(*)
                   FROM {$this->table}
                   WHERE user_id = :user_id";
@@ -174,6 +301,8 @@ class Order {
      * Get dashboard-style order stats for a user.
      */
     public function getUserOrderStats(int $userId): array {
+        $this->expireStalePendingOrdersIfNeeded();
+
         $stmt = $this->conn->prepare(
             "SELECT COUNT(*) AS total_orders,
                     COALESCE(SUM(order_status IN ('pending', 'confirmed', 'processing')), 0) AS active_orders,
@@ -199,6 +328,8 @@ class Order {
      * Get a full order detail with items and latest payment for one user.
      */
     public function getDetailByUserId(int $userId, int $orderId): ?array {
+        $this->expireStalePendingOrdersIfNeeded();
+
         $query = "SELECT o.*,
                          COUNT(od.id) AS item_count,
                          COALESCE(SUM(od.quantity), 0) AS total_quantity
@@ -252,6 +383,8 @@ class Order {
      * Get online_mock orders for admin review by payment status.
      */
     public function getAdminOnlineMockOrdersByPaymentStatus(string $paymentStatus, int $limit = 30): array {
+        $this->expireStalePendingOrdersIfNeeded();
+
         $query = "SELECT o.id,
                          o.order_number,
                          o.full_name,
@@ -290,6 +423,8 @@ class Order {
      * Count online_mock orders by payment status for admin realtime checks.
      */
     public function countAdminOnlineMockOrdersByPaymentStatus(string $paymentStatus): int {
+        $this->expireStalePendingOrdersIfNeeded();
+
         $stmt = $this->conn->prepare(
             "SELECT COUNT(*)
              FROM {$this->table}
@@ -305,8 +440,10 @@ class Order {
      * Get minimal online_mock order info for external QR payment portal.
      */
     public function getOnlineMockOrderForPortal(int $orderId): ?array {
+        $this->expireStalePendingOrdersIfNeeded();
+
         $stmt = $this->conn->prepare(
-            "SELECT id, user_id, order_number, total_amount, payment_method, payment_status, created_at
+            "SELECT id, user_id, order_number, total_amount, payment_method, payment_status, order_status, created_at
              FROM {$this->table}
              WHERE id = :order_id
              LIMIT 1"
@@ -339,12 +476,13 @@ class Order {
      */
     public function confirmOnlineMockPaymentByUser(int $userId, int $orderId): bool {
         $this->clearLastError();
+        $this->expireStalePendingOrdersIfNeeded();
 
         $this->conn->beginTransaction();
 
         try {
             $orderStmt = $this->conn->prepare(
-                "SELECT id, order_number, total_amount, payment_method, payment_status
+                "SELECT id, order_number, total_amount, payment_method, payment_status, order_status
                  FROM {$this->table}
                  WHERE id = :order_id AND user_id = :user_id
                  LIMIT 1
@@ -358,6 +496,12 @@ class Order {
             if (!$order || (string)$order['payment_method'] !== 'online_mock') {
                 $this->conn->rollBack();
                 $this->lastErrorMessage = 'Không tìm thấy đơn chuyển khoản giả lập hợp lệ để xác nhận.';
+                return false;
+            }
+
+            if ((string)($order['order_status'] ?? '') === 'cancelled') {
+                $this->conn->rollBack();
+                $this->lastErrorMessage = 'Đơn hàng đã bị hủy nên không thể xác nhận thanh toán nữa.';
                 return false;
             }
 
@@ -434,7 +578,7 @@ class Order {
 
         try {
             $orderStmt = $this->conn->prepare(
-                "SELECT id
+                "SELECT id, order_number, order_status
                  FROM {$this->table}
                  WHERE id = :order_id
                    AND payment_method = 'online_mock'
@@ -445,9 +589,21 @@ class Order {
             $orderStmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);
             $orderStmt->execute();
 
-            if (!$orderStmt->fetch()) {
+            $order = $orderStmt->fetch();
+            if (!$order) {
                 $this->conn->rollBack();
                 $this->lastErrorMessage = 'Không tìm thấy đơn hàng đang chờ duyệt thanh toán.';
+                return false;
+            }
+
+            if ((string)($order['order_status'] ?? '') === 'cancelled') {
+                $this->conn->rollBack();
+                $this->lastErrorMessage = 'Đơn hàng đã bị hủy nên không thể duyệt thanh toán.';
+                return false;
+            }
+
+            if (!$this->ensureInventoryReservedForApprovedPayment($orderId, (string)$order['order_number'])) {
+                $this->conn->rollBack();
                 return false;
             }
 
@@ -503,7 +659,7 @@ class Order {
 
         try {
             $orderStmt = $this->conn->prepare(
-                "SELECT id
+                "SELECT id, order_number, order_status
                  FROM {$this->table}
                  WHERE id = :order_id
                    AND payment_method = 'online_mock'
@@ -514,9 +670,21 @@ class Order {
             $orderStmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);
             $orderStmt->execute();
 
-            if (!$orderStmt->fetch()) {
+            $order = $orderStmt->fetch();
+            if (!$order) {
                 $this->conn->rollBack();
                 $this->lastErrorMessage = 'Không tìm thấy đơn hàng đang chờ duyệt để từ chối.';
+                return false;
+            }
+
+            if ((string)($order['order_status'] ?? '') === 'cancelled') {
+                $this->conn->rollBack();
+                $this->lastErrorMessage = 'Đơn hàng đã bị hủy nên không thể từ chối duyệt thanh toán nữa.';
+                return false;
+            }
+
+            if (!$this->syncInventoryForOrderStatus($orderId, (string)$order['order_number'], 'pending')) {
+                $this->conn->rollBack();
                 return false;
             }
 
@@ -541,6 +709,7 @@ class Order {
             $orderUpdateStmt = $this->conn->prepare(
                 "UPDATE {$this->table}
                  SET payment_status = 'failed',
+                     order_status = 'pending',
                      updated_at = CURRENT_TIMESTAMP
                  WHERE id = :order_id AND payment_status = 'pending_review'"
             );
@@ -576,7 +745,7 @@ class Order {
 
         try {
             $orderStmt = $this->conn->prepare(
-                "SELECT id
+                "SELECT id, order_status
                  FROM {$this->table}
                  WHERE id = :order_id
                    AND user_id = :user_id
@@ -589,9 +758,16 @@ class Order {
             $orderStmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
             $orderStmt->execute();
 
-            if (!$orderStmt->fetch()) {
+            $order = $orderStmt->fetch();
+            if (!$order) {
                 $this->conn->rollBack();
                 $this->lastErrorMessage = 'Không tìm thấy đơn hàng chuyển khoản giả lập cần gửi lại yêu cầu.';
+                return false;
+            }
+
+            if ((string)($order['order_status'] ?? '') === 'cancelled') {
+                $this->conn->rollBack();
+                $this->lastErrorMessage = 'Đơn hàng đã bị hủy nên không thể gửi lại yêu cầu thanh toán.';
                 return false;
             }
 
@@ -640,6 +816,8 @@ class Order {
      * Get admin order overview stats.
      */
     public function getAdminStats(): array {
+        $this->expireStalePendingOrdersIfNeeded();
+
         $stmt = $this->conn->query(
             "SELECT COUNT(*) AS total_orders,
                     COALESCE(SUM(order_status = 'pending'), 0) AS pending_orders,
@@ -670,6 +848,8 @@ class Order {
      * Get paginated admin orders with filters.
      */
     public function getAdminList(string $search = '', string $orderStatus = 'all', string $paymentStatus = 'all', int $limit = 20, int $offset = 0): array {
+        $this->expireStalePendingOrdersIfNeeded();
+
         $bindings = [];
         $whereSql = $this->buildAdminOrderFilterSql($search, $orderStatus, $paymentStatus, $bindings);
 
@@ -712,6 +892,8 @@ class Order {
      * Count admin orders with filters.
      */
     public function getAdminTotal(string $search = '', string $orderStatus = 'all', string $paymentStatus = 'all'): int {
+        $this->expireStalePendingOrdersIfNeeded();
+
         $bindings = [];
         $whereSql = $this->buildAdminOrderFilterSql($search, $orderStatus, $paymentStatus, $bindings);
 
@@ -726,6 +908,8 @@ class Order {
      * Get a full order detail for admin view.
      */
     public function getAdminDetailById(int $orderId): ?array {
+        $this->expireStalePendingOrdersIfNeeded();
+
         $stmt = $this->conn->prepare(
             "SELECT o.*,
                     u.username,
@@ -776,6 +960,7 @@ class Order {
      */
     public function updateAdminOrderStatus(int $orderId, string $nextStatus): bool {
         $this->clearLastError();
+        $this->expireStalePendingOrdersIfNeeded();
 
         $allowedStatuses = ['pending', 'confirmed', 'processing', 'shipping', 'delivered', 'cancelled'];
         if (!in_array($nextStatus, $allowedStatuses, true)) {
@@ -787,7 +972,7 @@ class Order {
 
         try {
             $currentStmt = $this->conn->prepare(
-                "SELECT order_status
+                "SELECT order_number, order_status, payment_method, payment_status
                  FROM {$this->table}
                  WHERE id = :order_id
                  LIMIT 1
@@ -796,16 +981,43 @@ class Order {
             $currentStmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);
             $currentStmt->execute();
 
-            $currentStatus = $currentStmt->fetchColumn();
-            if ($currentStatus === false) {
+            $currentOrder = $currentStmt->fetch();
+            if (!$currentOrder) {
                 $this->conn->rollBack();
                 $this->lastErrorMessage = 'Không tìm thấy đơn hàng cần cập nhật.';
                 return false;
             }
 
+            $currentStatus = (string)$currentOrder['order_status'];
+            $paymentMethod = (string)($currentOrder['payment_method'] ?? '');
+            $paymentStatus = (string)($currentOrder['payment_status'] ?? '');
+
+            if (
+                payment_method_is_online($paymentMethod)
+                && $paymentStatus !== 'paid'
+                && $nextStatus !== $currentStatus
+                && $nextStatus !== 'cancelled'
+            ) {
+                $this->conn->rollBack();
+                $this->lastErrorMessage = 'Đơn thanh toán online chỉ được cập nhật sang luồng xử lý sau khi trạng thái thanh toán là "paid". Nếu cần đóng đơn chưa thanh toán, hãy chuyển sang "cancelled".';
+                return false;
+            }
+
             if ((string)$currentStatus === $nextStatus) {
+                if ($this->orderStatusRequiresInventoryDeduction($nextStatus)
+                    && !$this->syncInventoryForOrderStatus($orderId, (string)$currentOrder['order_number'], $nextStatus)
+                ) {
+                    $this->conn->rollBack();
+                    return false;
+                }
+
                 $this->conn->commit();
                 return true;
+            }
+
+            if (!$this->syncInventoryForOrderStatus($orderId, (string)$currentOrder['order_number'], $nextStatus)) {
+                $this->conn->rollBack();
+                return false;
             }
 
             $updateStmt = $this->conn->prepare(
@@ -873,6 +1085,224 @@ class Order {
         foreach ($bindings as $key => $value) {
             $stmt->bindValue($key, $value, PDO::PARAM_STR);
         }
+    }
+
+    /**
+     * Sync product stock with the target order status.
+     */
+    private function syncInventoryForOrderStatus(int $orderId, string $orderNumber, string $targetStatus): bool {
+        $items = $this->getOrderInventoryItems($orderId);
+        if ($items === []) {
+            return true;
+        }
+
+        $loggedBalances = $this->getOrderInventoryBalances($orderId);
+        $shouldDeduct = $this->orderStatusRequiresInventoryDeduction($targetStatus);
+
+        if ($shouldDeduct) {
+            return $this->reserveMissingInventoryForOrder(
+                $orderId,
+                $orderNumber,
+                $items,
+                $loggedBalances,
+                'Trừ kho do xác nhận đơn hàng %s.'
+            );
+        }
+
+        foreach ($items as $item) {
+            $productId = (int)$item['product_id'];
+            $orderedQuantity = max(0, (int)$item['quantity']);
+            $loggedBalance = max(0, (int)($loggedBalances[$productId] ?? 0));
+
+            if ($productId <= 0 || $orderedQuantity <= 0) {
+                continue;
+            }
+
+            if ($loggedBalance <= 0) {
+                continue;
+            }
+
+            $this->lockProductForInventory($productId);
+            $this->updateProductStock($productId, $loggedBalance);
+            $this->insertInventoryLog($productId, $orderId, 'restore', $loggedBalance, 'Hoàn kho do đơn hàng ' . $orderNumber . ' chuyển về trạng thái ' . $targetStatus . '.');
+        }
+
+        return true;
+    }
+
+    /**
+     * Ensure an order has enough inventory reserved before payment approval or fulfillment.
+     *
+     * @param array<int, array<string, mixed>> $items
+     * @param array<int, int> $loggedBalances
+     */
+    private function reserveMissingInventoryForOrder(
+        int $orderId,
+        string $orderNumber,
+        array $items,
+        array $loggedBalances,
+        string $noteTemplate
+    ): bool {
+        foreach ($items as $item) {
+            $productId = (int)($item['product_id'] ?? 0);
+            $orderedQuantity = max(0, (int)($item['quantity'] ?? 0));
+            $loggedBalance = max(0, (int)($loggedBalances[$productId] ?? 0));
+
+            if ($productId <= 0 || $orderedQuantity <= 0) {
+                continue;
+            }
+
+            $missingQuantity = max(0, $orderedQuantity - $loggedBalance);
+            if ($missingQuantity === 0) {
+                continue;
+            }
+
+            $product = $this->lockProductForInventory($productId);
+            if (!$product) {
+                $this->lastErrorMessage = 'Không tìm thấy sản phẩm #' . $productId . ' để giữ kho cho đơn hàng.';
+                return false;
+            }
+
+            $currentStock = (int)($product['stock'] ?? 0);
+            if ($currentStock < $missingQuantity) {
+                $productName = (string)($item['product_name'] ?? $product['name'] ?? ('SP #' . $productId));
+                $this->lastErrorMessage = 'Không đủ tồn kho cho "' . $productName . '". Cần thêm ' . $missingQuantity . ' sản phẩm nhưng hiện chỉ còn ' . $currentStock . '.';
+                return false;
+            }
+
+            $this->updateProductStock($productId, -$missingQuantity);
+            $this->insertInventoryLog(
+                $productId,
+                $orderId,
+                'deduct',
+                $missingQuantity,
+                sprintf($noteTemplate, $orderNumber)
+            );
+        }
+
+        return true;
+    }
+
+    /**
+     * Re-reserve inventory before approving a resubmitted online_mock payment.
+     */
+    private function ensureInventoryReservedForApprovedPayment(int $orderId, string $orderNumber): bool {
+        $items = $this->getOrderInventoryItems($orderId);
+        if ($items === []) {
+            return true;
+        }
+
+        return $this->reserveMissingInventoryForOrder(
+            $orderId,
+            $orderNumber,
+            $items,
+            $this->getOrderInventoryBalances($orderId),
+            'Giữ lại kho trước khi duyệt thanh toán cho đơn hàng %s.'
+        );
+    }
+
+    /**
+     * Aggregate ordered quantities by product for inventory sync.
+     */
+    private function getOrderInventoryItems(int $orderId): array {
+        $stmt = $this->conn->prepare(
+            "SELECT product_id,
+                    MAX(product_name) AS product_name,
+                    SUM(quantity) AS quantity
+             FROM order_details
+             WHERE order_id = :order_id
+             GROUP BY product_id"
+        );
+        $stmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Get net inventory effect already recorded for one order.
+     *
+     * Positive balance means stock was deducted, zero means fully restored.
+     */
+    private function getOrderInventoryBalances(int $orderId): array {
+        $stmt = $this->conn->prepare(
+            "SELECT product_id,
+                    COALESCE(SUM(
+                        CASE
+                            WHEN action = 'deduct' THEN quantity
+                            WHEN action = 'restore' THEN -quantity
+                            ELSE 0
+                        END
+                    ), 0) AS balance
+             FROM inventory_logs
+             WHERE order_id = :order_id
+             GROUP BY product_id"
+        );
+        $stmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $balances = [];
+        foreach ($stmt->fetchAll() as $row) {
+            $balances[(int)$row['product_id']] = (int)$row['balance'];
+        }
+
+        return $balances;
+    }
+
+    /**
+     * Lock one product row before mutating stock.
+     */
+    private function lockProductForInventory(int $productId): ?array {
+        $stmt = $this->conn->prepare(
+            "SELECT id, name, stock
+             FROM products
+             WHERE id = :product_id
+             LIMIT 1
+             FOR UPDATE"
+        );
+        $stmt->bindValue(':product_id', $productId, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $product = $stmt->fetch();
+        return $product ?: null;
+    }
+
+    /**
+     * Apply a stock delta to one product.
+     */
+    private function updateProductStock(int $productId, int $delta): void {
+        $stmt = $this->conn->prepare(
+            "UPDATE products
+             SET stock = stock + :delta,
+                 updated_at = CURRENT_TIMESTAMP
+             WHERE id = :product_id"
+        );
+        $stmt->bindValue(':delta', $delta, PDO::PARAM_INT);
+        $stmt->bindValue(':product_id', $productId, PDO::PARAM_INT);
+        $stmt->execute();
+    }
+
+    /**
+     * Persist one inventory log row for traceability.
+     */
+    private function insertInventoryLog(int $productId, int $orderId, string $action, int $quantity, string $note): void {
+        $stmt = $this->conn->prepare(
+            "INSERT INTO inventory_logs (product_id, order_id, action, quantity, note)
+             VALUES (:product_id, :order_id, :action, :quantity, :note)"
+        );
+        $stmt->bindValue(':product_id', $productId, PDO::PARAM_INT);
+        $stmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);
+        $stmt->bindValue(':action', $action, PDO::PARAM_STR);
+        $stmt->bindValue(':quantity', $quantity, PDO::PARAM_INT);
+        $stmt->bindValue(':note', $note, PDO::PARAM_STR);
+        $stmt->execute();
+    }
+
+    /**
+     * Determine whether a status means stock must be reserved/deducted.
+     */
+    private function orderStatusRequiresInventoryDeduction(string $status): bool {
+        return in_array($status, ['confirmed', 'processing', 'shipping', 'delivered'], true);
     }
 
     /**

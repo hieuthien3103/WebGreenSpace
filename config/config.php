@@ -30,6 +30,7 @@ define('DB_CHARSET', 'utf8mb4');
 // Application Configuration
 define('APP_NAME', getenv('APP_NAME') ?: 'WebGreenSpace');
 define('APP_URL', getenv('APP_URL') ?: 'http://localhost/WebGreenSpace');
+define('APP_SECRET', trim((string)(getenv('APP_SECRET') ?: '')));
 define('BASE_PATH', dirname(__DIR__));
 
 // Path Configuration
@@ -49,6 +50,10 @@ define('UPLOAD_URL', APP_URL . '/uploads');
 define('SESSION_LIFETIME', 7200); // 2 hours
 ini_set('session.gc_maxlifetime', SESSION_LIFETIME);
 session_set_cookie_params(SESSION_LIFETIME);
+
+// Order Expiry Configuration
+define('ORDER_PENDING_ONLINE_MOCK_EXPIRY_MINUTES', max(5, (int)(getenv('ORDER_PENDING_ONLINE_MOCK_EXPIRY_MINUTES') ?: 30)));
+define('ORDER_PENDING_COD_EXPIRY_MINUTES', max(30, (int)(getenv('ORDER_PENDING_COD_EXPIRY_MINUTES') ?: 360)));
 
 // Security
 define('HASH_ALGO', PASSWORD_DEFAULT);
@@ -83,9 +88,13 @@ if (session_status() === PHP_SESSION_NONE) {
 // Autoload classes
 spl_autoload_register(function ($class) {
     $paths = [
+        APP_PATH . '/core/' . $class . '.php',
         APP_PATH . '/controllers/' . $class . '.php',
         APP_PATH . '/models/' . $class . '.php',
         APP_PATH . '/services/' . $class . '.php',
+        APP_PATH . '/dto/' . $class . '.php',
+        APP_PATH . '/presenters/' . $class . '.php',
+        APP_PATH . '/routing/' . $class . '.php',
         CONFIG_PATH . '/' . $class . '.php',
         BASE_PATH . '/helpers/' . $class . '.php',
     ];
@@ -100,3 +109,6 @@ spl_autoload_register(function ($class) {
 
 // Load helper functions
 require_once BASE_PATH . '/helpers/functions.php';
+
+// Load shared infrastructure classes that use lowercase filenames.
+require_once CONFIG_PATH . '/database.php';

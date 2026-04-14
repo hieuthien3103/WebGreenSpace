@@ -144,6 +144,17 @@ class ProductService {
             return null;
         }
     }
+
+    /**
+     * Track product detail page views.
+     */
+    public function incrementViews(int $productId): void {
+        try {
+            $this->productModel->incrementViews($productId);
+        } catch (Exception $e) {
+            error_log("ProductService Error: " . $e->getMessage());
+        }
+    }
     
     /**
      * Validate sort parameter

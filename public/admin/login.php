@@ -1,39 +1,11 @@
 <?php
+if (empty($GLOBALS['mvc_template_rendering'])) {
+    require_once __DIR__ . '/../../config/config.php';
+    (new AdminAuthController())->login()->send();
+    return;
+}
+
 require_once __DIR__ . '/../../config/config.php';
-require_once __DIR__ . '/../../config/database.php';
-
-if (is_logged_in() && is_admin()) {
-    redirect(admin_path('dashboard.php'));
-}
-
-$pageTitle = 'Đăng nhập admin - GreenSpace';
-$errors = [];
-$old = [
-    'identifier' => '',
-];
-$redirectTarget = safe_redirect_target($_GET['redirect'] ?? $_POST['redirect'] ?? 'dashboard.php', 'dashboard.php');
-$redirectTarget = str_starts_with($redirectTarget, 'admin/') ? substr($redirectTarget, 6) : ltrim($redirectTarget, '/');
-$redirectTarget = $redirectTarget !== '' ? $redirectTarget : 'dashboard.php';
-$switchingAccount = is_logged_in() && !is_admin();
-$flash = get_flash();
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $old['identifier'] = trim((string)($_POST['identifier'] ?? ''));
-
-    if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
-        $errors['general'] = 'Phiên làm việc đã hết hạn. Vui lòng thử lại.';
-    } else {
-        $authService = new AuthService();
-        $result = $authService->loginAdmin($old['identifier'], (string)($_POST['password'] ?? ''));
-
-        if (!empty($result['success'])) {
-            set_flash('success', 'Đăng nhập admin thành công.');
-            redirect(admin_path($redirectTarget));
-        }
-
-        $errors = $result['errors'] ?? ['general' => 'Không thể đăng nhập admin lúc này.'];
-    }
-}
 ?>
 <!DOCTYPE html>
 <html class="light" lang="vi">
@@ -84,12 +56,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 <div class="space-y-3 text-sm text-white/80">
                     <div class="rounded-2xl bg-white/10 px-4 py-3">
-                        <p class="font-semibold text-white">URL admin</p>
-                        <p class="mt-1">/admin/login</p>
+                        <p class="font-semibold text-white">Quản lý vận hành</p>
+                        <p class="mt-1">Theo dõi đơn hàng, duyệt thanh toán và cập nhật trạng thái xử lý trong cùng một nơi.</p>
                     </div>
                     <div class="rounded-2xl bg-white/10 px-4 py-3">
-                        <p class="font-semibold text-white">Tài khoản seed mẫu</p>
-                        <p class="mt-1">admin@webgreenspace.com / password</p>
+                        <p class="font-semibold text-white">Không gian làm việc riêng</p>
+                        <p class="mt-1">Khu vực quản trị được tách biệt để đội vận hành xử lý hệ thống mà không ảnh hưởng tới luồng mua sắm của khách.</p>
                     </div>
                 </div>
             </section>
@@ -140,7 +112,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 type="text"
                                 value="<?= clean($old['identifier']) ?>"
                                 class="w-full rounded-2xl border <?= !empty($errors['identifier']) ? 'border-red-300' : 'border-[#d8eadf]' ?> bg-white px-4 py-3 text-[#102118] focus:border-[#2e9b63] focus:ring-[#2e9b63]/20"
-                                placeholder="admin@webgreenspace.com"
+                                placeholder="Nhập email hoặc username admin"
                                 autocomplete="username"
                             >
                             <?php if (!empty($errors['identifier'])): ?>

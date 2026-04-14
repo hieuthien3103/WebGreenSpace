@@ -1,7 +1,11 @@
 <?php
+if (empty($GLOBALS['mvc_template_rendering'])) {
+    require_once __DIR__ . '/../config/config.php';
+    (new ContentController())->care()->send();
+    return;
+}
+
 require_once __DIR__ . '/../config/config.php';
-$pageTitle = 'Chăm sóc cây - GreenSpace';
-$currentPage = 'care';
 include 'includes/header.php'; 
 ?>
 

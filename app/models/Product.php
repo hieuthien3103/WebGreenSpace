@@ -144,12 +144,15 @@ class Product {
                   FROM {$this->table} p
                   LEFT JOIN categories c ON p.category_id = c.id
                   WHERE " . self::ACTIVE_PRODUCT_WHERE . "
-                    AND (p.name LIKE :keyword OR p.description LIKE :keyword OR c.name LIKE :keyword)
+                    AND (p.name LIKE :keyword_name OR p.description LIKE :keyword_description OR c.name LIKE :keyword_category)
                   ORDER BY p.featured DESC, p.created_at DESC
                   LIMIT :limit OFFSET :offset";
 
         $stmt = $this->conn->prepare($query);
-        $stmt->bindValue(':keyword', '%' . $keyword . '%', PDO::PARAM_STR);
+        $keywordValue = '%' . $keyword . '%';
+        $stmt->bindValue(':keyword_name', $keywordValue, PDO::PARAM_STR);
+        $stmt->bindValue(':keyword_description', $keywordValue, PDO::PARAM_STR);
+        $stmt->bindValue(':keyword_category', $keywordValue, PDO::PARAM_STR);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->bindValue(':offset', $offset, PDO::PARAM_INT);
         $stmt->execute();
@@ -560,8 +563,11 @@ class Product {
         }
 
         if (!empty($filters['search'])) {
-            $whereClauses[] = "({$productAlias}.name LIKE :search OR {$productAlias}.description LIKE :search OR {$categoryAlias}.name LIKE :search)";
-            $params[':search'] = '%' . $filters['search'] . '%';
+            $searchValue = '%' . $filters['search'] . '%';
+            $whereClauses[] = "({$productAlias}.name LIKE :search_name OR {$productAlias}.description LIKE :search_description OR {$categoryAlias}.name LIKE :search_category)";
+            $params[':search_name'] = $searchValue;
+            $params[':search_description'] = $searchValue;
+            $params[':search_category'] = $searchValue;
         }
 
         return [$whereClauses, $params];
@@ -580,8 +586,11 @@ class Product {
         }
 
         if ($search !== '') {
-            $whereClauses[] = '(p.name LIKE :search OR p.slug LIKE :search OR c.name LIKE :search)';
-            $params[':search'] = '%' . $search . '%';
+            $searchValue = '%' . $search . '%';
+            $whereClauses[] = '(p.name LIKE :search_name OR p.slug LIKE :search_slug OR c.name LIKE :search_category)';
+            $params[':search_name'] = $searchValue;
+            $params[':search_slug'] = $searchValue;
+            $params[':search_category'] = $searchValue;
         }
 
         return [$whereClauses, $params];

@@ -1,10 +1,7 @@
 </main>
-
-<!-- Footer -->
 <footer class="bg-white pt-16 pb-8 dark:bg-[#0f1a14] border-t border-[#e9f2ec] dark:border-[#2a3b30]">
     <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div class="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-4">
-            <!-- Brand -->
             <div class="flex flex-col gap-4">
                 <div class="flex items-center gap-2">
                     <span class="material-symbols-outlined text-3xl text-primary">potted_plant</span>
@@ -28,8 +25,7 @@
                     </a>
                 </div>
             </div>
-            
-            <!-- Links Column 1 -->
+
             <div>
                 <h3 class="mb-4 text-sm font-bold uppercase tracking-wider text-text-main dark:text-white">Về chúng tôi</h3>
                 <ul class="space-y-3">
@@ -38,18 +34,16 @@
                     <li><a class="text-sm text-text-secondary hover:text-primary dark:text-gray-400 dark:hover:text-primary" href="#">Tin tức</a></li>
                 </ul>
             </div>
-            
-            <!-- Links Column 2 -->
+
             <div>
                 <h3 class="mb-4 text-sm font-bold uppercase tracking-wider text-text-main dark:text-white">Hỗ trợ khách hàng</h3>
                 <ul class="space-y-3">
                     <li><a class="text-sm text-text-secondary hover:text-primary dark:text-gray-400 dark:hover:text-primary" href="#">Hướng dẫn mua hàng</a></li>
                     <li><a class="text-sm text-text-secondary hover:text-primary dark:text-gray-400 dark:hover:text-primary" href="#">Chính sách đổi trả</a></li>
-                    <li><a class="text-sm text-text-secondary hover:text-primary dark:text-gray-400 dark:hover:text-primary" href="#">Chăm sóc cây xanh</a></li>
+                    <li><a class="text-sm text-text-secondary hover:text-primary dark:text-gray-400 dark:hover:text-primary" href="<?= base_url('care') ?>">Chăm sóc cây xanh</a></li>
                 </ul>
             </div>
-            
-            <!-- Contact -->
+
             <div>
                 <h3 class="mb-4 text-sm font-bold uppercase tracking-wider text-text-main dark:text-white">Liên hệ</h3>
                 <ul class="space-y-3">
@@ -68,7 +62,7 @@
                 </ul>
             </div>
         </div>
-        
+
         <div class="mt-12 border-t border-gray-100 dark:border-gray-800 pt-8 text-center">
             <p class="text-sm text-text-secondary dark:text-gray-500">© <?= date('Y') ?> GreenSpace. All rights reserved.</p>
         </div>

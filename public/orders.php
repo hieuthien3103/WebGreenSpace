@@ -1,10 +1,11 @@
 <?php
-require_once __DIR__ . '/../config/config.php';
-require_once __DIR__ . '/../config/database.php';
-
-if (!is_logged_in()) {
-    redirect('login.php?redirect=' . urlencode('orders.php'));
+if (empty($GLOBALS['mvc_template_rendering'])) {
+    require_once __DIR__ . '/../config/config.php';
+    (new AccountController())->orders()->send();
+    return;
 }
+
+require_once __DIR__ . '/../config/config.php';
 
 function user_orders_order_status_meta(string $status): array {
     $map = [
@@ -49,41 +50,6 @@ function user_orders_query(array $overrides = []): string {
 
     return '?' . http_build_query($params);
 }
-
-$statusOptions = [
-    'all' => 'Tất cả',
-    'pending' => 'Chờ xác nhận',
-    'confirmed' => 'Đã xác nhận',
-    'processing' => 'Đang chuẩn bị',
-    'shipping' => 'Đang giao',
-    'delivered' => 'Đã giao',
-    'cancelled' => 'Đã hủy',
-];
-
-$statusFilter = (string)($_GET['status'] ?? 'all');
-if (!array_key_exists($statusFilter, $statusOptions)) {
-    $statusFilter = 'all';
-}
-
-$page = max(1, (int)($_GET['page'] ?? 1));
-$perPage = 6;
-$offset = ($page - 1) * $perPage;
-$userId = (int)get_user_id();
-
-$orderModel = new Order();
-$stats = $orderModel->getUserOrderStats($userId);
-$totalOrders = $orderModel->countByUserId($userId, $statusFilter);
-$totalPages = max(1, (int)ceil($totalOrders / $perPage));
-
-if ($page > $totalPages) {
-    $page = $totalPages;
-    $offset = ($page - 1) * $perPage;
-}
-
-$orders = $orderModel->getPaginatedByUserId($userId, $perPage, $offset, $statusFilter);
-
-$pageTitle = 'Đơn hàng của tôi - GreenSpace';
-$currentPage = '';
 
 include 'includes/header.php';
 ?>

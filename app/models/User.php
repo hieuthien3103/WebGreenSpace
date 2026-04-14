@@ -6,6 +6,7 @@
 class User {
     private PDO $conn;
     private string $table = 'users';
+    private static array $tableColumnCache = [];
 
     public function __construct() {
         $db = new Database();
@@ -16,7 +17,7 @@ class User {
      * Find active user by ID.
      */
     public function findById(int $id): ?array {
-        $query = "SELECT id, username, email, password, full_name, phone, role, admin_permissions, status, created_at, updated_at
+        $query = "SELECT {$this->userSelectColumns()}
                   FROM {$this->table}
                   WHERE id = :id
                   LIMIT 1";
@@ -32,7 +33,7 @@ class User {
      * Find user by email.
      */
     public function findByEmail(string $email): ?array {
-        $query = "SELECT id, username, email, password, full_name, phone, role, admin_permissions, status, created_at, updated_at
+        $query = "SELECT {$this->userSelectColumns()}
                   FROM {$this->table}
                   WHERE email = :email
                   LIMIT 1";
@@ -48,7 +49,7 @@ class User {
      * Find user by username.
      */
     public function findByUsername(string $username): ?array {
-        $query = "SELECT id, username, email, password, full_name, phone, role, admin_permissions, status, created_at, updated_at
+        $query = "SELECT {$this->userSelectColumns()}
                   FROM {$this->table}
                   WHERE username = :username
                   LIMIT 1";
@@ -64,7 +65,7 @@ class User {
      * Find user by email or username.
      */
     public function findByLogin(string $identifier): ?array {
-        $query = "SELECT id, username, email, password, full_name, phone, role, admin_permissions, status, created_at, updated_at
+        $query = "SELECT {$this->userSelectColumns()}
                   FROM {$this->table}
                   WHERE email = :email_identifier OR username = :username_identifier
                   LIMIT 1";
@@ -81,18 +82,28 @@ class User {
      * Create a new user.
      */
     public function create(array $data): int {
-        $query = "INSERT INTO {$this->table} (username, email, password, full_name, phone, role, admin_permissions, status)
-                  VALUES (:username, :email, :password, :full_name, :phone, :role, :admin_permissions, :status)";
+        $columns = ['username', 'email', 'password', 'full_name', 'phone', 'role', 'status'];
+        $placeholders = [':username', ':email', ':password', ':full_name', ':phone', ':role', ':status'];
+        $encodedPermissions = $this->encodeAdminPermissions($data['admin_permissions'] ?? [], (string)($data['role'] ?? 'user'));
+
+        if ($this->hasColumn('admin_permissions')) {
+            array_splice($columns, 6, 0, ['admin_permissions']);
+            array_splice($placeholders, 6, 0, [':admin_permissions']);
+        }
+
+        $query = "INSERT INTO {$this->table} (" . implode(', ', $columns) . ")
+                  VALUES (" . implode(', ', $placeholders) . ")";
 
         $stmt = $this->conn->prepare($query);
-        $encodedPermissions = $this->encodeAdminPermissions($data['admin_permissions'] ?? [], (string)($data['role'] ?? 'user'));
         $stmt->bindValue(':username', $data['username'], PDO::PARAM_STR);
         $stmt->bindValue(':email', $data['email'], PDO::PARAM_STR);
         $stmt->bindValue(':password', $data['password'], PDO::PARAM_STR);
         $stmt->bindValue(':full_name', $data['full_name'], PDO::PARAM_STR);
         $stmt->bindValue(':phone', $data['phone'] ?: null, $data['phone'] ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->bindValue(':role', $data['role'] ?? 'user', PDO::PARAM_STR);
-        $stmt->bindValue(':admin_permissions', $encodedPermissions, $encodedPermissions !== null ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        if ($this->hasColumn('admin_permissions')) {
+            $stmt->bindValue(':admin_permissions', $encodedPermissions, $encodedPermissions !== null ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        }
         $stmt->bindValue(':status', $data['status'] ?? 'active', PDO::PARAM_STR);
         $stmt->execute();
 
@@ -129,23 +140,16 @@ class User {
     public function getAdminList(string $search = '', string $role = 'all', string $status = 'all', int $limit = 20, int $offset = 0): array {
         [$whereClauses, $params] = $this->buildAdminFilters('u', $search, $role, $status);
         $whereSql = empty($whereClauses) ? '' : 'WHERE ' . implode(' AND ', $whereClauses);
+        $selectColumns = $this->userSelectColumns('u');
+        $groupByColumns = $this->userGroupByColumns('u');
 
-        $query = "SELECT u.id,
-                         u.username,
-                         u.email,
-                         u.full_name,
-                         u.phone,
-                         u.role,
-                         u.admin_permissions,
-                         u.status,
-                         u.created_at,
-                         u.updated_at,
+        $query = "SELECT {$selectColumns},
                          COUNT(o.id) AS order_count,
                          COALESCE(SUM(CASE WHEN o.payment_status = 'paid' THEN o.total_amount ELSE 0 END), 0) AS total_spent
                   FROM {$this->table} u
                   LEFT JOIN orders o ON o.user_id = u.id
                   {$whereSql}
-                  GROUP BY u.id, u.username, u.email, u.full_name, u.phone, u.role, u.admin_permissions, u.status, u.created_at, u.updated_at
+                  GROUP BY {$groupByColumns}
                   ORDER BY u.updated_at DESC, u.created_at DESC
                   LIMIT :limit OFFSET :offset";
 
@@ -251,24 +255,33 @@ class User {
      * Update a user from the admin dashboard.
      */
     public function updateAdminUser(int $userId, array $data): bool {
+        $assignments = [
+            'username = :username',
+            'email = :email',
+            'full_name = :full_name',
+            'phone = :phone',
+            'role = :role',
+            'status = :status',
+        ];
+        $encodedPermissions = $this->encodeAdminPermissions($data['admin_permissions'] ?? [], (string)$data['role']);
+
+        if ($this->hasColumn('admin_permissions')) {
+            array_splice($assignments, 5, 0, ['admin_permissions = :admin_permissions']);
+        }
+
         $query = "UPDATE {$this->table}
-                  SET username = :username,
-                      email = :email,
-                      full_name = :full_name,
-                      phone = :phone,
-                      role = :role,
-                      admin_permissions = :admin_permissions,
-                      status = :status
+                  SET " . implode(",\n                      ", $assignments) . "
                   WHERE id = :id";
 
         $stmt = $this->conn->prepare($query);
-        $encodedPermissions = $this->encodeAdminPermissions($data['admin_permissions'] ?? [], (string)$data['role']);
         $stmt->bindValue(':username', $data['username'], PDO::PARAM_STR);
         $stmt->bindValue(':email', $data['email'], PDO::PARAM_STR);
         $stmt->bindValue(':full_name', $data['full_name'], PDO::PARAM_STR);
         $stmt->bindValue(':phone', $data['phone'] ?: null, $data['phone'] ? PDO::PARAM_STR : PDO::PARAM_NULL);
         $stmt->bindValue(':role', $data['role'], PDO::PARAM_STR);
-        $stmt->bindValue(':admin_permissions', $encodedPermissions, $encodedPermissions !== null ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        if ($this->hasColumn('admin_permissions')) {
+            $stmt->bindValue(':admin_permissions', $encodedPermissions, $encodedPermissions !== null ? PDO::PARAM_STR : PDO::PARAM_NULL);
+        }
         $stmt->bindValue(':status', $data['status'], PDO::PARAM_STR);
         $stmt->bindValue(':id', $userId, PDO::PARAM_INT);
 
@@ -358,5 +371,70 @@ class User {
         }
 
         return json_encode(array_values($permissions), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: null;
+    }
+
+    /**
+     * Build the user column list for SELECT queries.
+     */
+    private function userSelectColumns(string $alias = ''): string {
+        $prefix = $alias !== '' ? $alias . '.' : '';
+        $columns = [
+            'id',
+            'username',
+            'email',
+            'password',
+            'full_name',
+            'phone',
+            'role',
+            'status',
+            'created_at',
+            'updated_at',
+        ];
+
+        if ($this->hasColumn('admin_permissions')) {
+            array_splice($columns, 7, 0, ['admin_permissions']);
+        }
+
+        return implode(', ', array_map(
+            static fn(string $column): string => $prefix . $column,
+            $columns
+        ));
+    }
+
+    /**
+     * Build the GROUP BY list for user aggregate queries.
+     */
+    private function userGroupByColumns(string $alias = ''): string {
+        return $this->userSelectColumns($alias);
+    }
+
+    /**
+     * Check whether the current users table contains a column.
+     */
+    private function hasColumn(string $column): bool {
+        return in_array($column, $this->tableColumns(), true);
+    }
+
+    /**
+     * Load and cache the current table column names.
+     *
+     * @return string[]
+     */
+    private function tableColumns(): array {
+        if (isset(self::$tableColumnCache[$this->table])) {
+            return self::$tableColumnCache[$this->table];
+        }
+
+        $columns = [];
+        $stmt = $this->conn->query("DESCRIBE {$this->table}");
+        foreach ($stmt->fetchAll() ?: [] as $definition) {
+            $field = trim((string)($definition['Field'] ?? ''));
+            if ($field !== '') {
+                $columns[] = $field;
+            }
+        }
+
+        self::$tableColumnCache[$this->table] = $columns;
+        return $columns;
     }
 }

@@ -28,9 +28,6 @@ include 'includes/header.php';
                     <p class="rounded-2xl bg-white/10 px-4 py-3 font-medium">
                         Lưu địa chỉ nhận hàng, theo dõi đơn và quay lại giỏ hàng nhanh hơn trên mọi thiết bị.
                     </p>
-                    <p class="rounded-2xl bg-white/10 px-4 py-3 font-medium">
-                        Nếu bạn quản trị hệ thống, khu vực admin có trang đăng nhập riêng để tách biệt với trải nghiệm mua sắm.
-                    </p>
                 </div>
             </section>
 
@@ -90,12 +87,6 @@ include 'includes/header.php';
                         Chưa có tài khoản?
                         <a href="signup.php<?= $redirectTarget !== 'home.php' ? '?redirect=' . urlencode($redirectTarget) : '' ?>" class="font-semibold text-primary hover:text-primary-dark">
                             Đăng ký ngay
-                        </a>
-                    </p>
-                    <p class="mt-3 text-sm text-text-secondary">
-                        Cần vào khu vực quản trị?
-                        <a href="admin/login.php<?= $adminRedirect !== 'dashboard.php' ? '?redirect=' . urlencode($adminRedirect) : '' ?>" class="font-semibold text-primary hover:text-primary-dark">
-                            Đăng nhập admin
                         </a>
                     </p>
                 </div>

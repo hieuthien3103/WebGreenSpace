@@ -30,10 +30,6 @@ class AdminPageService {
      * Attempt one admin login.
      */
     public function login(array $input): array {
-        if (!verify_csrf_token($input['csrf_token'] ?? null)) {
-            return ['success' => false, 'errors' => ['general' => 'Phiên làm việc đã hết hạn. Vui lòng thử lại.']];
-        }
-
         return $this->authService->loginAdmin(
             trim((string)($input['identifier'] ?? '')),
             (string)($input['password'] ?? '')
@@ -446,15 +442,16 @@ class AdminPageService {
         ]);
 
         if ($updated) {
+            $result = ['success' => true, 'message' => 'Đã cập nhật thông tin tài khoản.', 'editId' => $editId];
+
             if ($editId === $currentUserId) {
                 $freshUser = $this->userModel->findById($editId);
                 if ($freshUser) {
-                    $_SESSION['user_role'] = $freshUser['role'] ?? 'user';
-                    $_SESSION['user_data'] = $this->userModel->withoutPassword($freshUser);
+                    $result['fresh_user'] = $this->userModel->withoutPassword($freshUser);
                 }
             }
 
-            return ['success' => true, 'message' => 'Đã cập nhật thông tin tài khoản.', 'editId' => $editId];
+            return $result;
         }
 
         return ['success' => false, 'errors' => ['general' => 'Không thể cập nhật tài khoản lúc này.'], 'formData' => $formData, 'editId' => $editId, 'editingUser' => $editingUser];

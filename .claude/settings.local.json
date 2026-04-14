@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"set_flash\\\\|redirect\\\\|header\\\\|session\\\\|setcookie\" /e/SGU/Web2/WebGreenSpace/app/services/*.php)",
+      "Bash(grep -l 'set_flash\\\\|redirect\\\\|header\\\\|session\\\\|$_SESSION\\\\|set_cookie' '/e/SGU/Web2/WebGreenSpace/public/*.php')",
+      "Bash(grep -r \"SELECT\\\\|INSERT\\\\|UPDATE\\\\|DELETE\\\\|new Database\\\\|->getConnection\\\\|->prepare\\\\|\\\\->execute\" /e/SGU/Web2/WebGreenSpace/public/admin/*.php)"
+    ]
+  }
+}

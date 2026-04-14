@@ -21,6 +21,19 @@ class CartController extends Controller {
             $isAjaxRequest = strtolower((string)($_SERVER['HTTP_X_REQUESTED_WITH'] ?? '')) === 'xmlhttprequest'
                 || (string)($_POST['ajax'] ?? '0') === '1';
             $redirectTarget = safe_redirect_target($_POST['redirect_to'] ?? 'cart.php', 'cart.php');
+
+            if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
+                if ($isAjaxRequest) {
+                    return $this->json([
+                        'success' => false,
+                        'message' => 'Phiên làm việc đã hết hạn. Vui lòng tải lại trang.',
+                        'cart_count' => cart_item_count(),
+                    ], 419);
+                }
+                set_flash('error', 'Phiên làm việc đã hết hạn. Vui lòng thử lại.');
+                return $this->redirect($redirectTarget);
+            }
+
             $result = $this->pageService->mutateCart($_POST);
 
             if ($isAjaxRequest) {

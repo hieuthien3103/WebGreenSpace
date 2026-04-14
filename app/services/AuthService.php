@@ -65,8 +65,6 @@ class AuthService {
             $user = $this->userModel->findById((int)$user['id']) ?? $user;
         }
 
-        $this->storeSession($user);
-
         return [
             'success' => true,
             'user' => $this->userModel->withoutPassword($user),
@@ -106,26 +104,10 @@ class AuthService {
             return ['success' => false, 'errors' => ['general' => 'Không thể tạo tài khoản lúc này.']];
         }
 
-        $this->storeSession($user);
-
         return [
             'success' => true,
             'user' => $this->userModel->withoutPassword($user),
         ];
-    }
-
-    /**
-     * Log the current user out.
-     */
-    public function logout(): void {
-        $_SESSION = [];
-
-        if (ini_get('session.use_cookies')) {
-            $params = session_get_cookie_params();
-            setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
-        }
-
-        session_regenerate_id(true);
     }
 
     /**
@@ -173,19 +155,6 @@ class AuthService {
         }
 
         return $errors;
-    }
-
-    /**
-     * Save authenticated user into session.
-     */
-    private function storeSession(array $user): void {
-        session_regenerate_id(true);
-
-        $safeUser = $this->userModel->withoutPassword($user);
-
-        $_SESSION['user_id'] = (int)$safeUser['id'];
-        $_SESSION['user_role'] = $safeUser['role'] ?? 'user';
-        $_SESSION['user_data'] = $safeUser;
     }
 
     /**

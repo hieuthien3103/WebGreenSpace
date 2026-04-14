@@ -28,14 +28,18 @@ class ContentController extends Controller {
         $errors = [];
 
         if ($this->request->method() === 'POST') {
-            $result = $this->pageService->submitContact($_POST);
-            if (!empty($result['success'])) {
-                set_flash('success', 'GreenSpace đã nhận được tin nhắn của bạn. Admin sẽ xem và phản hồi sớm nhất.');
-                return $this->redirect('contact.php');
-            }
+            if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
+                $errors = ['general' => 'Phiên làm việc đã hết hạn. Vui lòng thử lại.'];
+            } else {
+                $result = $this->pageService->submitContact($_POST);
+                if (!empty($result['success'])) {
+                    set_flash('success', 'GreenSpace đã nhận được tin nhắn của bạn. Admin sẽ xem và phản hồi sớm nhất.');
+                    return $this->redirect('contact.php');
+                }
 
-            $values = $result['values'] ?? [];
-            $errors = $result['errors'] ?? [];
+                $values = $result['values'] ?? [];
+                $errors = $result['errors'] ?? [];
+            }
         }
 
         return $this->template(PUBLIC_PATH . '/contact.php', $this->pagePresenter->presentContact($values, $errors));

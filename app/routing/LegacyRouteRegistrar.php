@@ -25,6 +25,8 @@ class LegacyRouteRegistrar implements RouteRegistrar {
         $router->get('/signup', [AuthController::class, 'signup']);
         $router->post('/signup', [AuthController::class, 'signup']);
         $router->post('/logout', [AuthController::class, 'logout']);
+        $router->get('/cart-api', [CartApiController::class, 'handle']);
+        $router->post('/cart-api', [CartApiController::class, 'handle']);
         $router->get('/get-price-range', [UtilityController::class, 'priceRange']);
         $router->get('/debug', [UtilityController::class, 'debug']);
     }

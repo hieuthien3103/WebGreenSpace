@@ -228,6 +228,10 @@ class AdminPageController extends Controller {
 
             $result = $this->pageService->handleUserAction($_POST);
             if (!empty($result['success'])) {
+                if (!empty($result['fresh_user'])) {
+                    $_SESSION['user_role'] = $result['fresh_user']['role'] ?? 'user';
+                    $_SESSION['user_data'] = $result['fresh_user'];
+                }
                 set_flash('success', (string)$result['message']);
                 $nextEditId = max(0, (int)($result['editId'] ?? 0));
                 return $this->redirect($nextEditId > 0 ? 'users.php?edit=' . urlencode((string)$nextEditId) : 'users.php');

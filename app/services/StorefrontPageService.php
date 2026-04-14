@@ -33,10 +33,6 @@ class StorefrontPageService {
      * Attempt a storefront login.
      */
     public function login(array $input, bool $adminOnly = false): array {
-        if (!verify_csrf_token($input['csrf_token'] ?? null)) {
-            return ['success' => false, 'errors' => ['general' => 'Phiên làm việc đã hết hạn. Vui lòng thử lại.']];
-        }
-
         $identifier = trim((string)($input['identifier'] ?? ''));
         $password = (string)($input['password'] ?? '');
 
@@ -49,10 +45,6 @@ class StorefrontPageService {
      * Attempt a storefront registration.
      */
     public function register(array $input): array {
-        if (!verify_csrf_token($input['csrf_token'] ?? null)) {
-            return ['success' => false, 'errors' => ['general' => 'Phiên làm việc đã hết hạn. Vui lòng thử lại.']];
-        }
-
         return $this->authService->register($input);
     }
 
@@ -69,9 +61,6 @@ class StorefrontPageService {
         ];
 
         $errors = [];
-        if (!verify_csrf_token($input['csrf_token'] ?? null)) {
-            $errors['general'] = 'Phiên làm việc đã hết hạn. Vui lòng thử lại.';
-        }
 
         if ($values['full_name'] === '') {
             $errors['full_name'] = 'Vui lòng nhập họ và tên.';
@@ -114,14 +103,6 @@ class StorefrontPageService {
      * Handle one cart mutation.
      */
     public function mutateCart(array $input): array {
-        if (!verify_csrf_token($input['csrf_token'] ?? null)) {
-            return [
-                'success' => false,
-                'message' => 'Phiên làm việc đã hết hạn. Vui lòng tải lại trang.',
-                'status' => 419,
-            ];
-        }
-
         $action = (string)($input['action'] ?? '');
         $result = ['success' => false, 'message' => 'Hành động không hợp lệ.', 'status' => 422];
 
@@ -149,19 +130,6 @@ class StorefrontPageService {
 
         $result['cart_count'] = cart_item_count();
         return $result;
-    }
-
-    /**
-     * Build the default checkout draft values.
-     */
-    public function pullCheckoutDraft(): ?array {
-        $draft = $_SESSION['checkout_quick_draft'] ?? null;
-        if (is_array($draft)) {
-            unset($_SESSION['checkout_quick_draft']);
-            return $draft;
-        }
-
-        return null;
     }
 
     /**
@@ -198,13 +166,6 @@ class StorefrontPageService {
             return ['success' => false, 'errors' => $errors];
         }
 
-        $_SESSION['checkout_quick_draft'] = [
-            'email' => trim((string)($input['email'] ?? '')),
-            'note' => trim((string)($input['note'] ?? '')),
-            'payment_method' => trim((string)($input['payment_method'] ?? 'cod')),
-            'save_as_default' => !empty($input['save_as_default']),
-        ];
-
         $makeDefault = !empty($input['save_as_default']);
         $newAddressId = $this->addressModel->createForUser($userId, $payload, $makeDefault);
 
@@ -214,6 +175,12 @@ class StorefrontPageService {
             'message' => $makeDefault
                 ? 'Đã lưu nhanh địa chỉ vào hồ sơ và đặt làm mặc định.'
                 : 'Đã lưu nhanh địa chỉ vào hồ sơ. Bạn có thể dùng lại cho các lần mua sau.',
+            'draft_data' => [
+                'email'           => trim((string)($input['email'] ?? '')),
+                'note'            => trim((string)($input['note'] ?? '')),
+                'payment_method'  => trim((string)($input['payment_method'] ?? 'cod')),
+                'save_as_default' => $makeDefault,
+            ],
         ];
     }
 
@@ -241,11 +208,12 @@ class StorefrontPageService {
         ]);
 
         $freshUser = $this->userModel->findById($userId);
+        $result = ['success' => true, 'message' => 'Đã cập nhật thông tin tài khoản.'];
         if ($freshUser) {
-            $_SESSION['user_data'] = $this->userModel->withoutPassword($freshUser);
+            $result['fresh_user'] = $this->userModel->withoutPassword($freshUser);
         }
 
-        return ['success' => true, 'message' => 'Đã cập nhật thông tin tài khoản.'];
+        return $result;
     }
 
     /**
@@ -438,10 +406,4 @@ class StorefrontPageService {
         return ['success' => false, 'error' => $this->orderModel->getLastErrorMessage() ?? 'Khong the gui yeu cau thanh toan luc nay. Vui long thu lai.'];
     }
 
-    /**
-     * Log the active user out.
-     */
-    public function logout(): void {
-        $this->authService->logout();
-    }
 }

@@ -29,13 +29,19 @@ class AdminAuthController extends Controller {
         $old = ['identifier' => ''];
         if ($this->request->method() === 'POST') {
             $old['identifier'] = trim((string)$this->request->input('identifier', ''));
-            $result = $this->pageService->login($_POST);
-            if (!empty($result['success'])) {
-                set_flash('success', 'Đăng nhập admin thành công.');
-                return $this->redirect(admin_path($redirectTarget));
-            }
 
-            $errors = $result['errors'] ?? ['general' => 'Không thể đăng nhập admin lúc này.'];
+            if (!verify_csrf_token($this->request->input('csrf_token'))) {
+                $errors = ['general' => 'Phiên làm việc đã hết hạn. Vui lòng thử lại.'];
+            } else {
+                $result = $this->pageService->login($_POST);
+                if (!empty($result['success'])) {
+                    store_auth_session($result['user']);
+                    set_flash('success', 'Đăng nhập admin thành công.');
+                    return $this->redirect(admin_path($redirectTarget));
+                }
+
+                $errors = $result['errors'] ?? ['general' => 'Không thể đăng nhập admin lúc này.'];
+            }
         }
 
         return $this->template(PUBLIC_PATH . '/admin/login.php', $this->pagePresenter->presentLogin($errors, $old, $redirectTarget));

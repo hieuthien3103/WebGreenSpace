@@ -676,8 +676,39 @@ function validate_uploaded_image(array $file): array {
 }
 
 /**
+ * Store authenticated user data into the session.
+ * Must be called by controllers after a successful login or registration.
+ *
+ * @param array $user User data already stripped of sensitive fields (e.g. password).
+ * @return void
+ */
+function store_auth_session(array $user): void {
+    session_regenerate_id(true);
+    $_SESSION['user_id']   = (int)$user['id'];
+    $_SESSION['user_role'] = $user['role'] ?? 'user';
+    $_SESSION['user_data'] = $user;
+}
+
+/**
+ * Destroy the current authentication session and invalidate the cookie.
+ * Must be called by controllers on logout.
+ *
+ * @return void
+ */
+function clear_auth_session(): void {
+    $_SESSION = [];
+
+    if (ini_get('session.use_cookies')) {
+        $params = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
+    }
+
+    session_regenerate_id(true);
+}
+
+/**
  * Generate random string
- * 
+ *
  * @param int $length String length
  * @return string Random string
  */

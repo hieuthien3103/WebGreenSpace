@@ -36,6 +36,9 @@ class AccountController extends Controller {
             $action = (string)$this->request->input('action', '');
             if ($action === 'update_profile') {
                 $result = $this->pageService->updateProfile($userId, $_POST);
+                if (!empty($result['success']) && !empty($result['fresh_user'])) {
+                    $_SESSION['user_data'] = $result['fresh_user'];
+                }
                 set_flash(!empty($result['success']) ? 'success' : 'error', (string)$result['message']);
                 return $this->redirect('profile.php');
             }

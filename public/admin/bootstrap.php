@@ -22,6 +22,7 @@ function admin_nav_items(): array {
         'products.php' => ['label' => 'Quản lý sản phẩm', 'permission' => 'products.manage'],
         'categories.php' => ['label' => 'Quản lý danh mục', 'permission' => 'categories.manage'],
         'users.php' => ['label' => 'Quản lý user', 'permission' => 'users.manage'],
+        'inventory.php' => ['label' => 'Nhập kho', 'permission' => 'inventory.manage'],
     ];
 }
 

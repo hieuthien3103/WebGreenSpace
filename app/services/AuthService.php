@@ -25,8 +25,10 @@ class AuthService {
     }
 
     /**
-     * Attempt a login with optional admin enforcement.
+     * Dummy bcrypt hash used to prevent timing leaks when user is not found.
      */
+    private const DUMMY_HASH = '$2y$10$abcdefghijklmnopqrstuuABCDEFGHIJKLMNOPQRSTUVWXYZ012345';
+
     private function attemptLogin(string $identifier, string $password, bool $adminOnly): array {
         $identifier = trim($identifier);
         $errors = [];
@@ -44,11 +46,14 @@ class AuthService {
         }
 
         $user = $this->userModel->findByLogin($identifier);
+
         if (!$user) {
+            password_verify($password, self::DUMMY_HASH);
             return ['success' => false, 'errors' => ['general' => 'Thông tin đăng nhập không đúng.']];
         }
 
         if (($user['status'] ?? 'inactive') !== 'active') {
+            password_verify($password, self::DUMMY_HASH);
             return ['success' => false, 'errors' => ['general' => 'Tài khoản hiện không khả dụng.']];
         }
 
@@ -89,15 +94,29 @@ class AuthService {
             return ['success' => false, 'errors' => $errors];
         }
 
-        $userId = $this->userModel->create([
-            'username' => $input['username'],
-            'email' => $input['email'],
-            'password' => password_hash($input['password'], HASH_ALGO, ['cost' => HASH_COST]),
-            'full_name' => $input['full_name'],
-            'phone' => $input['phone'],
-            'role' => 'user',
-            'status' => 'active',
-        ]);
+        try {
+            $userId = $this->userModel->create([
+                'username' => $input['username'],
+                'email' => $input['email'],
+                'password' => password_hash($input['password'], HASH_ALGO, ['cost' => HASH_COST]),
+                'full_name' => $input['full_name'],
+                'phone' => $input['phone'],
+                'role' => 'user',
+                'status' => 'active',
+            ]);
+        } catch (\PDOException $e) {
+            if ((int)$e->getCode() === 23000) {
+                $msg = $e->getMessage();
+                if (stripos($msg, 'username') !== false) {
+                    return ['success' => false, 'errors' => ['username' => 'Tên đăng nhập đã tồn tại.']];
+                }
+                if (stripos($msg, 'email') !== false) {
+                    return ['success' => false, 'errors' => ['email' => 'Email đã được sử dụng.']];
+                }
+                return ['success' => false, 'errors' => ['general' => 'Tên đăng nhập hoặc email đã tồn tại.']];
+            }
+            throw $e;
+        }
 
         $user = $this->userModel->findById($userId);
         if (!$user) {

@@ -69,35 +69,35 @@ class Cart {
      * @return array Cart items
      */
     public function getCartItems(int $userId): array {
-        $query = "SELECT c.*, 
-                         p.name, 
+        $query = "SELECT c.*,
+                         p.name,
                          p.slug,
-                         p.price, 
-                         p.old_price,
-                         p.thumbnail_url,
-                         p.stock_quantity
+                         p.price,
+                         p.sale_price,
+                         p.image,
+                         p.stock
                   FROM {$this->table} c
                   INNER JOIN products p ON c.product_id = p.id
                   WHERE c.user_id = :user_id
                   ORDER BY c.created_at DESC";
-        
+
         $stmt = $this->conn->prepare($query);
         $stmt->bindParam(':user_id', $userId, PDO::PARAM_INT);
         $stmt->execute();
-        
+
         $items = $stmt->fetchAll();
-        
+
         // Format image URLs
         foreach ($items as &$item) {
-            if (!empty($item['thumbnail_url'])) {
-                $item['image_url'] = strpos($item['thumbnail_url'], 'http') === 0 
-                    ? $item['thumbnail_url'] 
-                    : image_url($item['thumbnail_url']);
+            if (!empty($item['image'])) {
+                $item['image_url'] = strpos($item['image'], 'http') === 0
+                    ? $item['image']
+                    : image_url($item['image']);
             } else {
                 $item['image_url'] = image_url('products/default.jpg');
             }
         }
-        
+
         return $items;
     }
 
@@ -183,7 +183,7 @@ class Cart {
      * @return float Total price
      */
     public function getCartTotal(int $userId): float {
-        $query = "SELECT SUM(c.quantity * p.price) as total
+        $query = "SELECT SUM(c.quantity * COALESCE(NULLIF(p.sale_price, 0), p.price)) as total
                   FROM {$this->table} c
                   INNER JOIN products p ON c.product_id = p.id
                   WHERE c.user_id = :user_id";

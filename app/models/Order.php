@@ -1109,6 +1109,9 @@ class Order {
             );
         }
 
+        $batchModel = new InventoryBatch($this->conn);
+        $useBatches = $batchModel->tableExists();
+
         foreach ($items as $item) {
             $productId = (int)$item['product_id'];
             $orderedQuantity = max(0, (int)$item['quantity']);
@@ -1118,13 +1121,28 @@ class Order {
                 continue;
             }
 
-            if ($loggedBalance <= 0) {
-                continue;
+            $this->lockProductForInventory($productId);
+            $restoreQty = 0;
+
+            if ($useBatches) {
+                $batchRestored = $batchModel->restoreFifo($orderId, $productId);
+                $batchModel->syncProductStock($productId);
+
+                if ($batchRestored > 0) {
+                    $restoreQty = $batchRestored;
+                } elseif ($loggedBalance > 0 && !$batchModel->hasAllocations($orderId, $productId)) {
+                    $restoreQty = $loggedBalance;
+                }
+            } else {
+                if ($loggedBalance > 0) {
+                    $this->updateProductStock($productId, $loggedBalance);
+                    $restoreQty = $loggedBalance;
+                }
             }
 
-            $this->lockProductForInventory($productId);
-            $this->updateProductStock($productId, $loggedBalance);
-            $this->insertInventoryLog($productId, $orderId, 'restore', $loggedBalance, 'Hoàn kho do đơn hàng ' . $orderNumber . ' chuyển về trạng thái ' . $targetStatus . '.');
+            if ($restoreQty > 0) {
+                $this->insertInventoryLog($productId, $orderId, 'restore', $restoreQty, 'Hoàn kho do đơn hàng ' . $orderNumber . ' chuyển về trạng thái ' . $targetStatus . '.');
+            }
         }
 
         return true;
@@ -1143,6 +1161,9 @@ class Order {
         array $loggedBalances,
         string $noteTemplate
     ): bool {
+        $batchModel = new InventoryBatch($this->conn);
+        $useBatches = $batchModel->tableExists();
+
         foreach ($items as $item) {
             $productId = (int)($item['product_id'] ?? 0);
             $orderedQuantity = max(0, (int)($item['quantity'] ?? 0));
@@ -1170,7 +1191,13 @@ class Order {
                 return false;
             }
 
-            $this->updateProductStock($productId, -$missingQuantity);
+            if ($useBatches) {
+                $batchModel->deductFifo($productId, $missingQuantity, $orderId);
+                $batchModel->syncProductStock($productId);
+            } else {
+                $this->updateProductStock($productId, -$missingQuantity);
+            }
+
             $this->insertInventoryLog(
                 $productId,
                 $orderId,

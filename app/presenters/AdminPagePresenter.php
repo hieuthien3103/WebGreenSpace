@@ -557,6 +557,50 @@ class AdminPagePresenter {
     }
 
     /**
+     * Build the admin inventory batch page state.
+     */
+    public function presentInventory(int $productFilter, int $page): array {
+        $batchModel = new InventoryBatch();
+        $tableExists = $batchModel->tableExists();
+
+        $products = [];
+        $batches = [];
+        $totalBatches = 0;
+        $totalPages = 1;
+        $perPage = ADMIN_ITEMS_PER_PAGE;
+        $selectedProduct = null;
+
+        if ($tableExists) {
+            $db = new Database();
+            $conn = $db->getConnection();
+            $products = $conn->query(
+                "SELECT id, name, slug, stock FROM products ORDER BY name ASC"
+            )->fetchAll(PDO::FETCH_ASSOC) ?: [];
+
+            if ($productFilter > 0) {
+                $selectedProduct = $this->productModel->getAdminById($productFilter);
+            }
+
+            $totalBatches = $batchModel->getAdminTotal($productFilter);
+            $totalPages = max(1, (int)ceil($totalBatches / $perPage));
+            $page = min(max(1, $page), $totalPages);
+            $offset = ($page - 1) * $perPage;
+            $batches = $batchModel->getAdminList($productFilter, $perPage, $offset);
+        }
+
+        return [
+            'tableExists' => $tableExists,
+            'products' => $products,
+            'batches' => $batches,
+            'productFilter' => $productFilter,
+            'selectedProduct' => $selectedProduct,
+            'page' => $page,
+            'totalBatches' => $totalBatches,
+            'totalPages' => $totalPages,
+        ];
+    }
+
+    /**
      * Build data for the image audit tool.
      */
     public function presentCheckImages(): array {

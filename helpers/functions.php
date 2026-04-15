@@ -178,6 +178,10 @@ function admin_permission_catalog(): array {
             'label' => 'Quản lý liên hệ',
             'description' => 'Đọc tin nhắn từ form liên hệ và theo dõi trạng thái xử lý.',
         ],
+        'inventory.manage' => [
+            'label' => 'Quản lý kho hàng',
+            'description' => 'Nhập kho theo lô, xem lịch sử nhập và tồn kho theo lô (FIFO).',
+        ],
     ];
 }
 
@@ -704,6 +708,55 @@ function clear_auth_session(): void {
     }
 
     session_regenerate_id(true);
+}
+
+/**
+ * Check whether login attempts are rate-limited for the current session.
+ *
+ * @param int $maxAttempts Maximum failed attempts before lockout.
+ * @param int $windowSeconds Window in which failures are counted.
+ * @param int $lockoutSeconds Cooldown after exceeding limit.
+ * @return array{allowed: bool, retry_after?: int}
+ */
+function check_login_rate_limit(int $maxAttempts = 5, int $windowSeconds = 300, int $lockoutSeconds = 60): array {
+    $now = time();
+    $key = 'login_attempts';
+    $lockKey = 'login_locked_until';
+
+    if (!empty($_SESSION[$lockKey]) && $now < (int)$_SESSION[$lockKey]) {
+        return ['allowed' => false, 'retry_after' => (int)$_SESSION[$lockKey] - $now];
+    }
+
+    if (!empty($_SESSION[$lockKey]) && $now >= (int)$_SESSION[$lockKey]) {
+        unset($_SESSION[$lockKey], $_SESSION[$key]);
+    }
+
+    $attempts = $_SESSION[$key] ?? [];
+    $attempts = array_values(array_filter($attempts, static fn(int $t): bool => ($now - $t) < $windowSeconds));
+    $_SESSION[$key] = $attempts;
+
+    if (count($attempts) >= $maxAttempts) {
+        $_SESSION[$lockKey] = $now + $lockoutSeconds;
+        $_SESSION[$key] = [];
+        return ['allowed' => false, 'retry_after' => $lockoutSeconds];
+    }
+
+    return ['allowed' => true];
+}
+
+/**
+ * Record one failed login attempt for rate limiting.
+ */
+function record_failed_login(): void {
+    $_SESSION['login_attempts'] = $_SESSION['login_attempts'] ?? [];
+    $_SESSION['login_attempts'][] = time();
+}
+
+/**
+ * Clear login rate limit state after successful login.
+ */
+function clear_login_rate_limit(): void {
+    unset($_SESSION['login_attempts'], $_SESSION['login_locked_until']);
 }
 
 /**

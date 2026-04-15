@@ -28,17 +28,22 @@ class AuthController extends Controller {
         if ($this->request->method() === 'POST') {
             $old['identifier'] = trim((string)$this->request->input('identifier', ''));
 
-            if (!verify_csrf_token($this->request->input('csrf_token'))) {
+            $rateCheck = check_login_rate_limit();
+            if (!$rateCheck['allowed']) {
+                $errors = ['general' => 'Bạn đã thử đăng nhập quá nhiều lần. Vui lòng chờ ' . ($rateCheck['retry_after'] ?? 60) . ' giây.'];
+            } elseif (!verify_csrf_token($this->request->input('csrf_token'))) {
                 $errors = ['general' => 'Phiên làm việc đã hết hạn. Vui lòng thử lại.'];
             } else {
                 $result = $this->pageService->login($_POST, false);
 
                 if (!empty($result['success'])) {
+                    clear_login_rate_limit();
                     store_auth_session($result['user']);
                     set_flash('success', 'Đăng nhập thành công. Chào mừng bạn quay lại.');
                     return $this->redirect($redirectTarget);
                 }
 
+                record_failed_login();
                 $errors = $result['errors'] ?? ['general' => 'Không thể đăng nhập lúc này.'];
             }
         }

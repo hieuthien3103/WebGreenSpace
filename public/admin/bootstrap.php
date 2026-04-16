@@ -22,6 +22,7 @@ function admin_nav_items(): array {
         'products.php' => ['label' => 'Quản lý sản phẩm', 'permission' => 'products.manage'],
         'categories.php' => ['label' => 'Quản lý danh mục', 'permission' => 'categories.manage'],
         'users.php' => ['label' => 'Quản lý user', 'permission' => 'users.manage'],
+        'inventory.php' => ['label' => 'Nhập kho', 'permission' => 'inventory.manage'],
     ];
 }
 
@@ -96,14 +97,15 @@ function render_admin_header(string $title): void {
                         </div>
 
                         <div class="flex flex-wrap items-center gap-3">
-                            <a href="<?= clean(base_url('public/home.php')) ?>" class="inline-flex items-center rounded-full border border-[#d9e9de] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">
+                            <a href="<?= clean(base_url()) ?>" class="inline-flex items-center rounded-full border border-[#d9e9de] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">
                                 Về trang bán hàng
                             </a>
-                            <a href="<?= clean(base_url('public/profile.php')) ?>" class="inline-flex items-center rounded-full border border-[#d9e9de] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">
+                            <a href="<?= clean(base_url('profile')) ?>" class="inline-flex items-center rounded-full border border-[#d9e9de] px-4 py-2 text-sm font-semibold text-[#102118] transition-colors hover:border-[#2e9b63] hover:text-[#2e9b63]">
                                 <?= clean($adminName) ?>
                             </a>
-                            <form action="<?= clean(base_url('public/logout.php')) ?>" method="POST">
+                            <form action="<?= clean(base_url('logout')) ?>" method="POST">
                                 <input type="hidden" name="csrf_token" value="<?= clean(csrf_token()) ?>">
+                                <input type="hidden" name="redirect" value="<?= clean('admin/login.php') ?>">
                                 <button type="submit" class="inline-flex items-center rounded-full bg-[#102118] px-4 py-2 text-sm font-semibold text-white transition-colors hover:bg-[#1f3b2d]">
                                     Đăng xuất
                                 </button>

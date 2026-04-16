@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   web:
     build: .
@@ -17,8 +15,6 @@ services:
     environment:
       MYSQL_ROOT_PASSWORD: root
       MYSQL_DATABASE: webgreenspace
-      MYSQL_USER: webuser
-      MYSQL_PASSWORD: webpassword
     ports:
       - "3306:3306"
     volumes:

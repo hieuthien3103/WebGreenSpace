@@ -47,6 +47,7 @@ require_once __DIR__ . '/../config/config.php';
                     </div>
                 <?php elseif ((string)$order['payment_status'] === 'unpaid'): ?>
                     <form method="POST" class="mt-5">
+                        <input type="hidden" name="csrf_token" value="<?= clean(csrf_token()) ?>">
                         <input type="hidden" name="order_id" value="<?= clean((string)$order['id']) ?>">
                         <input type="hidden" name="token" value="<?= clean($token) ?>">
                         <input type="hidden" name="action" value="confirm_qr_payment">

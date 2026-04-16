@@ -298,6 +298,8 @@ class CheckoutService {
 
     /**
      * Reserve inventory immediately when an order is created.
+     * When inventory_batches table exists, deducts using FIFO (oldest batch first)
+     * and keeps product stock synchronized.
      *
      * @param PDO $conn
      * @param int $orderId
@@ -306,6 +308,9 @@ class CheckoutService {
      * @return void
      */
     private function reserveInventoryForOrder(PDO $conn, int $orderId, string $orderNumber, array $items): void {
+        $batchModel = new InventoryBatch($conn);
+        $useBatches = $batchModel->tableExists();
+
         $stockStmt = $conn->prepare(
             "UPDATE products
              SET stock = stock - :quantity,
@@ -324,9 +329,14 @@ class CheckoutService {
                 continue;
             }
 
-            $stockStmt->bindValue(':quantity', $quantity, PDO::PARAM_INT);
-            $stockStmt->bindValue(':product_id', $productId, PDO::PARAM_INT);
-            $stockStmt->execute();
+            if ($useBatches) {
+                $batchModel->deductFifo($productId, $quantity, $orderId);
+                $batchModel->syncProductStock($productId);
+            } else {
+                $stockStmt->bindValue(':quantity', $quantity, PDO::PARAM_INT);
+                $stockStmt->bindValue(':product_id', $productId, PDO::PARAM_INT);
+                $stockStmt->execute();
+            }
 
             $logStmt->bindValue(':product_id', $productId, PDO::PARAM_INT);
             $logStmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);

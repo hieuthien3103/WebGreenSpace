@@ -178,6 +178,10 @@ function admin_permission_catalog(): array {
             'label' => 'Quản lý liên hệ',
             'description' => 'Đọc tin nhắn từ form liên hệ và theo dõi trạng thái xử lý.',
         ],
+        'inventory.manage' => [
+            'label' => 'Quản lý kho hàng',
+            'description' => 'Nhập kho theo lô, xem lịch sử nhập và tồn kho theo lô (FIFO).',
+        ],
     ];
 }
 
@@ -676,8 +680,88 @@ function validate_uploaded_image(array $file): array {
 }
 
 /**
+ * Store authenticated user data into the session.
+ * Must be called by controllers after a successful login or registration.
+ *
+ * @param array $user User data already stripped of sensitive fields (e.g. password).
+ * @return void
+ */
+function store_auth_session(array $user): void {
+    session_regenerate_id(true);
+    $_SESSION['user_id']   = (int)$user['id'];
+    $_SESSION['user_role'] = $user['role'] ?? 'user';
+    $_SESSION['user_data'] = $user;
+}
+
+/**
+ * Destroy the current authentication session and invalidate the cookie.
+ * Must be called by controllers on logout.
+ *
+ * @return void
+ */
+function clear_auth_session(): void {
+    $_SESSION = [];
+
+    if (ini_get('session.use_cookies')) {
+        $params = session_get_cookie_params();
+        setcookie(session_name(), '', time() - 42000, $params['path'], $params['domain'], $params['secure'], $params['httponly']);
+    }
+
+    session_regenerate_id(true);
+}
+
+/**
+ * Check whether login attempts are rate-limited for the current session.
+ *
+ * @param int $maxAttempts Maximum failed attempts before lockout.
+ * @param int $windowSeconds Window in which failures are counted.
+ * @param int $lockoutSeconds Cooldown after exceeding limit.
+ * @return array{allowed: bool, retry_after?: int}
+ */
+function check_login_rate_limit(int $maxAttempts = 5, int $windowSeconds = 300, int $lockoutSeconds = 60): array {
+    $now = time();
+    $key = 'login_attempts';
+    $lockKey = 'login_locked_until';
+
+    if (!empty($_SESSION[$lockKey]) && $now < (int)$_SESSION[$lockKey]) {
+        return ['allowed' => false, 'retry_after' => (int)$_SESSION[$lockKey] - $now];
+    }
+
+    if (!empty($_SESSION[$lockKey]) && $now >= (int)$_SESSION[$lockKey]) {
+        unset($_SESSION[$lockKey], $_SESSION[$key]);
+    }
+
+    $attempts = $_SESSION[$key] ?? [];
+    $attempts = array_values(array_filter($attempts, static fn(int $t): bool => ($now - $t) < $windowSeconds));
+    $_SESSION[$key] = $attempts;
+
+    if (count($attempts) >= $maxAttempts) {
+        $_SESSION[$lockKey] = $now + $lockoutSeconds;
+        $_SESSION[$key] = [];
+        return ['allowed' => false, 'retry_after' => $lockoutSeconds];
+    }
+
+    return ['allowed' => true];
+}
+
+/**
+ * Record one failed login attempt for rate limiting.
+ */
+function record_failed_login(): void {
+    $_SESSION['login_attempts'] = $_SESSION['login_attempts'] ?? [];
+    $_SESSION['login_attempts'][] = time();
+}
+
+/**
+ * Clear login rate limit state after successful login.
+ */
+function clear_login_rate_limit(): void {
+    unset($_SESSION['login_attempts'], $_SESSION['login_locked_until']);
+}
+
+/**
  * Generate random string
- * 
+ *
  * @param int $length String length
  * @return string Random string
  */

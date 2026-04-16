@@ -20,6 +20,28 @@ class ProductController extends Controller {
     }
 
     /**
+     * Resolve a product from the legacy ?slug= / ?id= query string, then show the detail page.
+     * Used by public/product-detail.php.
+     */
+    public function detailByRequest(): Response {
+        $slug = trim((string)$this->request->query('slug', ''));
+
+        if ($slug === '') {
+            $productId = max(0, (int)$this->request->query('id', 0));
+            if ($productId > 0) {
+                $product = (new Product())->getById($productId);
+                $slug = (string)($product['slug'] ?? '');
+            }
+        }
+
+        if ($slug === '') {
+            return $this->redirect('products.php');
+        }
+
+        return $this->detail($slug);
+    }
+
+    /**
      * Display product detail page
      */
     public function detail(string $slug): Response {

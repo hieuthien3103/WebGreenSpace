@@ -29,7 +29,11 @@ class CheckoutController extends Controller {
         }
 
         $userId = (int)get_user_id();
-        $draft = $this->pageService->pullCheckoutDraft();
+        $draft = null;
+        if (is_array($_SESSION['checkout_quick_draft'] ?? null)) {
+            $draft = $_SESSION['checkout_quick_draft'];
+            unset($_SESSION['checkout_quick_draft']);
+        }
         $values = [];
         $errors = [];
         $selectedAddressId = max(0, (int)($this->request->query('saved_address', 0)));
@@ -68,6 +72,9 @@ class CheckoutController extends Controller {
                     } else {
                         $result = $this->pageService->quickSaveCheckoutAddress($userId, $_POST);
                         if (!empty($result['success'])) {
+                            if (!empty($result['draft_data'])) {
+                                $_SESSION['checkout_quick_draft'] = $result['draft_data'];
+                            }
                             set_flash('success', (string)$result['message']);
                             return $this->redirect('checkout.php?saved_address=' . urlencode((string)$result['address_id']) . '#saved-addresses');
                         }

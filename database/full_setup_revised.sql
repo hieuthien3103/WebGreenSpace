@@ -8,6 +8,8 @@ USE webgreenspace;
 SET NAMES utf8mb4;
 SET FOREIGN_KEY_CHECKS = 0;
 
+DROP TABLE IF EXISTS inventory_batch_allocations;
+DROP TABLE IF EXISTS inventory_batches;
 DROP TABLE IF EXISTS inventory_logs;
 DROP TABLE IF EXISTS coupon_usages;
 DROP TABLE IF EXISTS coupons;
@@ -372,6 +374,52 @@ CREATE TABLE inventory_logs (
     INDEX idx_inventory_logs_product_id (product_id),
     INDEX idx_inventory_logs_order_id (order_id),
     INDEX idx_inventory_logs_action (action)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========================================
+-- Table: inventory_batches
+-- FIFO batch inventory management
+-- ========================================
+CREATE TABLE inventory_batches (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_id INT NOT NULL,
+    batch_code VARCHAR(50) NOT NULL,
+    quantity_received INT NOT NULL,
+    quantity_remaining INT NOT NULL,
+    cost_price DECIMAL(10, 2) DEFAULT NULL COMMENT 'Unit cost price for this batch',
+    supplier VARCHAR(200) DEFAULT NULL,
+    note VARCHAR(255) DEFAULT NULL,
+    received_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_inventory_batches_product
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    INDEX idx_inventory_batches_product_id (product_id),
+    INDEX idx_inventory_batches_product_remaining (product_id, quantity_remaining),
+    INDEX idx_inventory_batches_received_at (received_at),
+    UNIQUE KEY unique_batch_code (batch_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ========================================
+-- Table: inventory_batch_allocations
+-- Tracks which batch quantities were consumed per order+product for FIFO restore
+-- ========================================
+CREATE TABLE inventory_batch_allocations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    order_id INT NOT NULL,
+    product_id INT NOT NULL,
+    batch_id INT NOT NULL,
+    quantity INT NOT NULL COMMENT 'Units consumed from this batch for this order+product',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_batch_alloc_order
+        FOREIGN KEY (order_id) REFERENCES orders(id) ON DELETE CASCADE,
+    CONSTRAINT fk_batch_alloc_product
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+    CONSTRAINT fk_batch_alloc_batch
+        FOREIGN KEY (batch_id) REFERENCES inventory_batches(id) ON DELETE CASCADE,
+    INDEX idx_batch_alloc_order_id (order_id),
+    INDEX idx_batch_alloc_order_product (order_id, product_id),
+    INDEX idx_batch_alloc_batch_id (batch_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ========================================

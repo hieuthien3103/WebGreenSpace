@@ -30,10 +30,6 @@ class AdminPageService {
      * Attempt one admin login.
      */
     public function login(array $input): array {
-        if (!verify_csrf_token($input['csrf_token'] ?? null)) {
-            return ['success' => false, 'errors' => ['general' => 'Phiên làm việc đã hết hạn. Vui lòng thử lại.']];
-        }
-
         return $this->authService->loginAdmin(
             trim((string)($input['identifier'] ?? '')),
             (string)($input['password'] ?? '')
@@ -446,18 +442,78 @@ class AdminPageService {
         ]);
 
         if ($updated) {
+            $result = ['success' => true, 'message' => 'Đã cập nhật thông tin tài khoản.', 'editId' => $editId];
+
             if ($editId === $currentUserId) {
                 $freshUser = $this->userModel->findById($editId);
                 if ($freshUser) {
-                    $_SESSION['user_role'] = $freshUser['role'] ?? 'user';
-                    $_SESSION['user_data'] = $this->userModel->withoutPassword($freshUser);
+                    $result['fresh_user'] = $this->userModel->withoutPassword($freshUser);
                 }
             }
 
-            return ['success' => true, 'message' => 'Đã cập nhật thông tin tài khoản.', 'editId' => $editId];
+            return $result;
         }
 
         return ['success' => false, 'errors' => ['general' => 'Không thể cập nhật tài khoản lúc này.'], 'formData' => $formData, 'editId' => $editId, 'editingUser' => $editingUser];
+    }
+
+    /**
+     * Receive one inventory batch from the admin form.
+     */
+    public function handleInventoryBatchReceive(array $input): array {
+        $productId = max(0, (int)($input['product_id'] ?? 0));
+        if ($productId <= 0) {
+            return ['success' => false, 'message' => 'Vui lòng chọn sản phẩm.', 'product_id' => 0];
+        }
+
+        $product = $this->productModel->getAdminById($productId);
+        if (!$product) {
+            return ['success' => false, 'message' => 'Không tìm thấy sản phẩm.', 'product_id' => 0];
+        }
+
+        $quantity = (int)($input['quantity'] ?? 0);
+        if ($quantity <= 0) {
+            return ['success' => false, 'message' => 'Số lượng nhập phải lớn hơn 0.', 'product_id' => $productId];
+        }
+
+        $batchCode = trim((string)($input['batch_code'] ?? ''));
+        $costPrice = trim((string)($input['cost_price'] ?? ''));
+        $supplier = trim((string)($input['supplier'] ?? ''));
+        $note = trim((string)($input['note'] ?? ''));
+
+        if ($costPrice !== '' && (!is_numeric(str_replace([' ', ','], ['', ''], $costPrice)) || (float)str_replace([' ', ','], ['', ''], $costPrice) < 0)) {
+            return ['success' => false, 'message' => 'Giá vốn không hợp lệ.', 'product_id' => $productId];
+        }
+
+        $batchModel = new InventoryBatch();
+        if (!$batchModel->tableExists()) {
+            return ['success' => false, 'message' => 'Bảng inventory_batches chưa được tạo. Vui lòng chạy migration.', 'product_id' => $productId];
+        }
+
+        try {
+            $batchModel->receiveBatch($productId, [
+                'batch_code' => $batchCode,
+                'quantity' => $quantity,
+                'cost_price' => $costPrice !== '' ? (float)str_replace([' ', ','], ['', ''], $costPrice) : null,
+                'supplier' => $supplier,
+                'note' => $note,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'Đã nhập lô hàng ' . $quantity . ' sản phẩm cho "' . ($product['name'] ?? 'SP #' . $productId) . '".',
+                'product_id' => $productId,
+            ];
+        } catch (\PDOException $e) {
+            if ((int)$e->getCode() === 23000 && stripos($e->getMessage(), 'batch_code') !== false) {
+                return ['success' => false, 'message' => 'Mã lô đã tồn tại. Vui lòng nhập mã lô khác.', 'product_id' => $productId];
+            }
+            error_log('Inventory batch receive error: ' . $e->getMessage());
+            return ['success' => false, 'message' => 'Không thể nhập lô hàng lúc này.', 'product_id' => $productId];
+        } catch (\Throwable $e) {
+            error_log('Inventory batch receive error: ' . $e->getMessage());
+            return ['success' => false, 'message' => 'Không thể nhập lô hàng lúc này.', 'product_id' => $productId];
+        }
     }
 
     /**

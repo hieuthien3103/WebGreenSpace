@@ -36,6 +36,9 @@ class AccountController extends Controller {
             $action = (string)$this->request->input('action', '');
             if ($action === 'update_profile') {
                 $result = $this->pageService->updateProfile($userId, $_POST);
+                if (!empty($result['success']) && !empty($result['fresh_user'])) {
+                    $_SESSION['user_data'] = $result['fresh_user'];
+                }
                 set_flash(!empty($result['success']) ? 'success' : 'error', (string)$result['message']);
                 return $this->redirect('profile.php');
             }
@@ -152,11 +155,15 @@ class AccountController extends Controller {
         $portalSuccess = null;
 
         if ($this->request->method() === 'POST' && (string)$this->request->input('action', '') === 'confirm_qr_payment') {
-            $result = $this->pageService->confirmQrPortalPayment($orderId);
-            if (!empty($result['success'])) {
-                $portalSuccess = (string)$result['message'];
+            if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
+                $portalError = 'Phiên làm việc đã hết hạn. Vui lòng tải lại trang và thử lại.';
             } else {
-                $portalError = (string)$result['error'];
+                $result = $this->pageService->confirmQrPortalPayment($orderId);
+                if (!empty($result['success'])) {
+                    $portalSuccess = (string)$result['message'];
+                } else {
+                    $portalError = (string)$result['error'];
+                }
             }
         }
 

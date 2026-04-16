@@ -18,10 +18,15 @@ class AdminRouteRegistrar implements RouteRegistrar {
         $router->post('/admin/categories', [AdminPageController::class, 'categories']);
         $router->get('/admin/users', [AdminPageController::class, 'users']);
         $router->post('/admin/users', [AdminPageController::class, 'users']);
+        $router->get('/admin/inventory', [AdminPageController::class, 'inventory']);
+        $router->post('/admin/inventory', [AdminPageController::class, 'inventory']);
         $router->get('/admin/check-images', [AdminToolController::class, 'checkImages']);
-        $router->get('/admin/clear-cache', [AdminToolController::class, 'clearCache']);
-        $router->get('/admin/create-placeholder', [AdminToolController::class, 'createPlaceholder']);
-        $router->get('/admin/fix-images', [AdminToolController::class, 'fixImages']);
+        $router->get('/admin/clear-cache', [AdminToolController::class, 'clearCacheForm']);
+        $router->post('/admin/clear-cache', [AdminToolController::class, 'clearCache']);
+        $router->get('/admin/create-placeholder', [AdminToolController::class, 'createPlaceholderForm']);
+        $router->post('/admin/create-placeholder', [AdminToolController::class, 'createPlaceholder']);
+        $router->get('/admin/fix-images', [AdminToolController::class, 'fixImagesForm']);
+        $router->post('/admin/fix-images', [AdminToolController::class, 'fixImages']);
         $router->get('/admin/products/catalog', [AdminToolController::class, 'getProducts']);
         $router->post('/admin/products/image-url', [AdminToolController::class, 'updateProductImage']);
         $router->post('/admin/products/upload-image', [AdminToolController::class, 'uploadProductImage']);

@@ -34,11 +34,29 @@ class AdminToolController extends Controller {
     }
 
     /**
-     * Clear caches and show the result page.
+     * Show confirmation form for clearing caches.
+     */
+    public function clearCacheForm(): Response {
+        if ($guard = $this->guardProductTools()) {
+            return $guard;
+        }
+
+        return $this->template(PUBLIC_PATH . '/admin/clear_cache.php', ['results' => null], 200, [
+            'mvc_template_current_page' => 'products.php',
+        ]);
+    }
+
+    /**
+     * Clear caches (POST + CSRF) and show the result page.
      */
     public function clearCache(): Response {
         if ($guard = $this->guardProductTools()) {
             return $guard;
+        }
+
+        if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
+            set_flash('error', 'Phiên làm việc đã hết hạn. Vui lòng thử lại.');
+            return $this->redirect('products.php');
         }
 
         return $this->template(PUBLIC_PATH . '/admin/clear_cache.php', $this->pagePresenter->presentClearCache($this->pageService->clearCaches()), 200, [
@@ -47,11 +65,29 @@ class AdminToolController extends Controller {
     }
 
     /**
-     * Create placeholder images and show the result page.
+     * Show confirmation form for creating placeholder images.
+     */
+    public function createPlaceholderForm(): Response {
+        if ($guard = $this->guardProductTools()) {
+            return $guard;
+        }
+
+        return $this->template(PUBLIC_PATH . '/admin/create_placeholder.php', ['results' => null], 200, [
+            'mvc_template_current_page' => 'products.php',
+        ]);
+    }
+
+    /**
+     * Create placeholder images (POST + CSRF) and show the result page.
      */
     public function createPlaceholder(): Response {
         if ($guard = $this->guardProductTools()) {
             return $guard;
+        }
+
+        if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
+            set_flash('error', 'Phiên làm việc đã hết hạn. Vui lòng thử lại.');
+            return $this->redirect('products.php');
         }
 
         return $this->template(PUBLIC_PATH . '/admin/create_placeholder.php', [
@@ -60,11 +96,29 @@ class AdminToolController extends Controller {
     }
 
     /**
-     * Normalize image paths and show the result page.
+     * Show confirmation form for normalizing image paths.
+     */
+    public function fixImagesForm(): Response {
+        if ($guard = $this->guardProductTools()) {
+            return $guard;
+        }
+
+        return $this->template(PUBLIC_PATH . '/admin/fix_images.php', ['results' => null], 200, [
+            'mvc_template_current_page' => 'products.php',
+        ]);
+    }
+
+    /**
+     * Normalize image paths (POST + CSRF) and show the result page.
      */
     public function fixImages(): Response {
         if ($guard = $this->guardProductTools()) {
             return $guard;
+        }
+
+        if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
+            set_flash('error', 'Phiên làm việc đã hết hạn. Vui lòng thử lại.');
+            return $this->redirect('products.php');
         }
 
         return $this->template(PUBLIC_PATH . '/admin/fix_images.php', [

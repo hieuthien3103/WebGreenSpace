@@ -7,7 +7,6 @@
 $router = new Router();
 $router
     ->register(new StorefrontRouteRegistrar())
-    ->register(new LegacyRouteRegistrar())
-    ->register(new AdminRouteRegistrar());
+    ->register(new LegacyRouteRegistrar());
 
 return $router;

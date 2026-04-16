@@ -140,7 +140,7 @@ include __DIR__ . '/../../layouts/header.php';
         <div class="border-b border-[#e9f2ec] dark:border-gray-800 mb-8">
             <nav class="flex gap-8">
                 <button type="button" class="pb-4 px-2 border-b-2 border-primary text-primary font-bold transition-colors">Mô tả</button>
-                <button type="button" class="pb-4 px-2 border-b-2 border-transparent text-text-secondary hover:text-primary transition-colors">Hướng dẫn chăm sóc</button>
+                <a href="<?= base_url('care') ?>" class="pb-4 px-2 border-b-2 border-transparent text-text-secondary hover:text-primary transition-colors">Hướng dẫn chăm sóc</a>
             </nav>
         </div>
 

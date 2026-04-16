@@ -27,14 +27,25 @@ class AuthController extends Controller {
 
         if ($this->request->method() === 'POST') {
             $old['identifier'] = trim((string)$this->request->input('identifier', ''));
-            $result = $this->pageService->login($_POST, false);
 
-            if (!empty($result['success'])) {
-                set_flash('success', 'Đăng nhập thành công. Chào mừng bạn quay lại.');
-                return $this->redirect($redirectTarget);
+            $rateCheck = check_login_rate_limit();
+            if (!$rateCheck['allowed']) {
+                $errors = ['general' => 'Bạn đã thử đăng nhập quá nhiều lần. Vui lòng chờ ' . ($rateCheck['retry_after'] ?? 60) . ' giây.'];
+            } elseif (!verify_csrf_token($this->request->input('csrf_token'))) {
+                $errors = ['general' => 'Phiên làm việc đã hết hạn. Vui lòng thử lại.'];
+            } else {
+                $result = $this->pageService->login($_POST, false);
+
+                if (!empty($result['success'])) {
+                    clear_login_rate_limit();
+                    store_auth_session($result['user']);
+                    set_flash('success', 'Đăng nhập thành công. Chào mừng bạn quay lại.');
+                    return $this->redirect($redirectTarget);
+                }
+
+                record_failed_login();
+                $errors = $result['errors'] ?? ['general' => 'Không thể đăng nhập lúc này.'];
             }
-
-            $errors = $result['errors'] ?? ['general' => 'Không thể đăng nhập lúc này.'];
         }
 
         return $this->template(PUBLIC_PATH . '/login.php', $this->pagePresenter->presentLogin($errors, $old, $redirectTarget));
@@ -60,13 +71,18 @@ class AuthController extends Controller {
                 'phone' => trim((string)($this->request->input('phone', ''))),
             ];
 
-            $result = $this->pageService->register($_POST);
-            if (!empty($result['success'])) {
-                set_flash('success', 'Tạo tài khoản thành công. Bạn đã được đăng nhập.');
-                return $this->redirect($redirectTarget);
-            }
+            if (!verify_csrf_token($this->request->input('csrf_token'))) {
+                $errors = ['general' => 'Phiên làm việc đã hết hạn. Vui lòng thử lại.'];
+            } else {
+                $result = $this->pageService->register($_POST);
+                if (!empty($result['success'])) {
+                    store_auth_session($result['user']);
+                    set_flash('success', 'Tạo tài khoản thành công. Bạn đã được đăng nhập.');
+                    return $this->redirect($redirectTarget);
+                }
 
-            $errors = $result['errors'] ?? ['general' => 'Không thể tạo tài khoản lúc này.'];
+                $errors = $result['errors'] ?? ['general' => 'Không thể tạo tài khoản lúc này.'];
+            }
         }
 
         return $this->template(PUBLIC_PATH . '/signup.php', $this->pagePresenter->presentSignup($errors, $old, $redirectTarget));
@@ -83,7 +99,7 @@ class AuthController extends Controller {
             return $this->redirect($redirectTarget);
         }
 
-        $this->pageService->logout();
+        clear_auth_session();
         set_flash('success', 'Bạn đã đăng xuất khỏi hệ thống.');
         return $this->redirect($redirectTarget);
     }

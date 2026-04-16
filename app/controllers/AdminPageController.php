@@ -228,6 +228,10 @@ class AdminPageController extends Controller {
 
             $result = $this->pageService->handleUserAction($_POST);
             if (!empty($result['success'])) {
+                if (!empty($result['fresh_user'])) {
+                    $_SESSION['user_role'] = $result['fresh_user']['role'] ?? 'user';
+                    $_SESSION['user_data'] = $result['fresh_user'];
+                }
                 set_flash('success', (string)$result['message']);
                 $nextEditId = max(0, (int)($result['editId'] ?? 0));
                 return $this->redirect($nextEditId > 0 ? 'users.php?edit=' . urlencode((string)$nextEditId) : 'users.php');
@@ -249,6 +253,37 @@ class AdminPageController extends Controller {
             $this->pagePresenter->presentUsers($search, $roleFilter, $statusFilter, $page, $editId, $errors, $formData, $editingUser),
             200,
             ['mvc_template_current_page' => 'users.php']
+        );
+    }
+
+    /**
+     * Show and handle admin inventory batch receiving.
+     */
+    public function inventory(): Response {
+        if ($guard = $this->guardPermission('inventory.manage')) {
+            return $guard;
+        }
+
+        $productFilter = max(0, (int)$this->request->query('product_id', 0));
+        $page = max(1, (int)$this->request->query('page', 1));
+
+        if ($this->request->method() === 'POST') {
+            if (!verify_csrf_token($_POST['csrf_token'] ?? null)) {
+                set_flash('error', 'Phiên làm việc đã hết hạn. Vui lòng thử lại.');
+                return $this->redirect('inventory.php');
+            }
+
+            $result = $this->pageService->handleInventoryBatchReceive($_POST);
+            set_flash(!empty($result['success']) ? 'success' : 'error', (string)$result['message']);
+            $redirectProductId = max(0, (int)($result['product_id'] ?? $this->request->input('product_id', 0)));
+            return $this->redirect('inventory.php' . ($redirectProductId > 0 ? '?product_id=' . $redirectProductId : ''));
+        }
+
+        return $this->template(
+            PUBLIC_PATH . '/admin/inventory.php',
+            $this->pagePresenter->presentInventory($productFilter, $page),
+            200,
+            ['mvc_template_current_page' => 'inventory.php']
         );
     }
 

@@ -134,6 +134,16 @@ class AccountController extends Controller {
                 set_flash(!empty($result['success']) ? 'success' : 'error', (string)$result['message']);
                 return $this->redirect('order-detail.php?id=' . urlencode((string)$orderId) . '#payment-confirmation');
             }
+
+            if ($action === 'cancel_order') {
+                $result = $this->pageService->cancelOrderByUser($userId, $orderId);
+                if (!empty($result['success'])) {
+                    set_flash('success', (string)$result['message']);
+                    return $this->redirect('order-detail.php?id=' . urlencode((string)$orderId));
+                }
+                set_flash('error', (string)$result['message']);
+                return $this->redirect('order-detail.php?id=' . urlencode((string)$orderId));
+            }
         }
 
         $viewData = $this->pagePresenter->presentOrderDetail($userId, $orderId);

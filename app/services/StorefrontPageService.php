@@ -374,6 +374,23 @@ class StorefrontPageService {
     }
 
     /**
+     * Cancel one order by the owning user.
+     */
+    public function cancelOrderByUser(int $userId, int $orderId): array {
+        $order = $this->orderModel->getDetailByUserId($userId, $orderId);
+        if (!$order) {
+            return ['success' => false, 'message' => 'Không tìm thấy đơn hàng hoặc bạn không có quyền hủy đơn này.'];
+        }
+
+        $cancelled = $this->orderModel->cancelOrderByUser($userId, $orderId);
+        if ($cancelled) {
+            return ['success' => true, 'message' => 'Đã hủy đơn hàng thành công.'];
+        }
+
+        return ['success' => false, 'message' => $this->orderModel->getLastErrorMessage() ?: 'Không thể hủy đơn hàng lúc này. Vui lòng thử lại.'];
+    }
+
+    /**
      * Confirm one payment from the standalone QR portal.
      */
     public function confirmQrPortalPayment(int $orderId): array {

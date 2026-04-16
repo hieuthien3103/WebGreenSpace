@@ -228,6 +228,9 @@ class StorefrontPagePresenter {
         $isCancelledOrder = (string)$order['order_status'] === 'cancelled';
         $canConfirmMockPayment = $isOnlineMockOrder && !$isCancelledOrder && (string)$order['payment_status'] === 'unpaid';
         $canResubmitMockPayment = $isOnlineMockOrder && !$isCancelledOrder && (string)$order['payment_status'] === 'failed';
+        $canCancelOrder = !$isCancelledOrder
+            && (string)$order['order_status'] === 'pending'
+            && in_array((string)$order['payment_status'], ['unpaid', 'failed'], true);
         $mockQrToken = build_qr_payment_token($orderId, $userId, (string)$order['order_number']);
         $mockQrPayUrl = 'qr-pay.php?order_id=' . urlencode((string)$orderId) . '&token=' . urlencode($mockQrToken);
 
@@ -242,6 +245,7 @@ class StorefrontPagePresenter {
             'isCancelledOrder' => $isCancelledOrder,
             'canConfirmMockPayment' => $canConfirmMockPayment,
             'canResubmitMockPayment' => $canResubmitMockPayment,
+            'canCancelOrder' => $canCancelOrder,
             'mockBankName' => 'GreenSpace Virtual Bank',
             'mockAccountNumber' => '1021182026',
             'mockAccountName' => 'CONG TY GREENSPACE DEMO',

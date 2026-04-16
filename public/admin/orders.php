@@ -468,7 +468,12 @@ render_admin_header('Quản lý đơn hàng');
                     <article class="rounded-[1.25rem] border border-[#edf4ef] bg-[#f8fbf9] p-4">
                         <p class="text-xs font-semibold uppercase tracking-[0.16em] text-[#6e8d7b]">Tổng quan</p>
                         <div class="mt-3 space-y-2 text-sm text-[#456a57]">
-                            <p>Tổng tiền: <strong class="text-[#102118]"><?= format_currency((float)$viewOrder['total_amount']) ?></strong></p>
+                            <p>Tạm tính: <strong class="text-[#102118]"><?= format_currency((float)($viewOrder['subtotal'] ?? 0)) ?></strong></p>
+                            <?php if ((float)($viewOrder['discount_amount'] ?? 0) > 0): ?>
+                                <p>Giảm giá: <strong class="text-[#102118]">-<?= format_currency((float)$viewOrder['discount_amount']) ?></strong></p>
+                            <?php endif; ?>
+                            <p>Phí vận chuyển: <strong class="text-[#102118]"><?= format_currency((float)($viewOrder['shipping_fee'] ?? 0)) ?></strong></p>
+                            <p class="border-t border-dashed border-[#d9e9de] pt-2">Tổng tiền: <strong class="text-[#102118]"><?= format_currency((float)$viewOrder['total_amount']) ?></strong></p>
                             <p>Thanh toán: <strong class="text-[#102118]"><?= clean(payment_method_label($viewPaymentMethod)) ?></strong></p>
                             <p>Tài khoản: <strong class="text-[#102118]"><?= clean((string)($viewOrder['account_full_name'] ?: $viewOrder['username'])) ?></strong></p>
                             <p>Số mặt hàng: <strong class="text-[#102118]"><?= clean((string)count($viewOrder['items'])) ?></strong></p>
@@ -526,8 +531,9 @@ render_admin_header('Quản lý đơn hàng');
                         </div>
 
                         <div class="mt-4 rounded-xl border border-[#f3ead7] bg-white px-4 py-3 text-sm text-[#6e8d7b]">
-                            <p>Mã giao dịch: <strong class="text-[#102118]"><?= clean((string)($viewOrder['payment']['transaction_code'] ?? 'Chưa có')) ?></strong></p>
-                            <p class="mt-2">Ghi chú: <?= clean((string)($viewOrder['payment']['note'] ?? 'Không có ghi chú.')) ?></p>
+                            <?php $reviewPayment = $viewOrder['payment'] ?? null; ?>
+                            <p>Mã giao dịch: <strong class="text-[#102118]"><?= clean((string)($reviewPayment['transaction_code'] ?? 'Chưa có')) ?></strong></p>
+                            <p class="mt-2">Ghi chú: <?= clean((string)($reviewPayment['note'] ?? 'Không có ghi chú.')) ?></p>
                         </div>
 
                         <div class="mt-4 grid gap-3 md:grid-cols-2">

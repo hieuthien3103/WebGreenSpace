@@ -53,12 +53,21 @@ include 'includes/header.php';
                     </p>
                 </div>
 
-                <div class="flex flex-wrap gap-3">
+                <div class="flex flex-wrap items-center gap-3">
                     <span class="rounded-full px-4 py-2 text-sm font-semibold <?= clean($orderStatus['class']) ?>"><?= clean($orderStatus['label']) ?></span>
                     <span class="rounded-full px-4 py-2 text-sm font-semibold <?= clean($paymentStatus['class']) ?>"><?= clean($paymentStatus['label']) ?></span>
                     <span class="rounded-full bg-white/90 px-4 py-2 text-sm font-semibold text-[#102118]">
                         <?= format_date($order['created_at'], 'd/m/Y H:i') ?>
                     </span>
+                    <?php if (!empty($canCancelOrder)): ?>
+                        <form method="POST" id="cancelOrderForm" onsubmit="return confirm('Bạn có chắc chắn muốn hủy đơn hàng này?')">
+                            <input type="hidden" name="csrf_token" value="<?= clean(csrf_token()) ?>">
+                            <input type="hidden" name="action" value="cancel_order">
+                            <button type="submit" class="rounded-full border border-red-200 bg-red-50 px-4 py-2 text-sm font-semibold text-red-700 transition-colors hover:bg-red-100">
+                                Hủy đơn hàng
+                            </button>
+                        </form>
+                    <?php endif; ?>
                 </div>
             </div>
         </section>

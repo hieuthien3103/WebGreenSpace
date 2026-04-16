@@ -91,7 +91,14 @@ class AdminPageController extends Controller {
             $result = $this->pageService->handleOrderAction($_POST);
             set_flash(!empty($result['success']) ? 'success' : 'error', (string)$result['message']);
             $redirectView = max(0, (int)$this->request->input('order_id', 0));
-            return $this->redirect('orders.php' . ($redirectView > 0 ? '?view=' . urlencode((string)$redirectView) . '#order-detail' : ''));
+            $redirectQuery = $this->buildAdminOrderRedirectQuery(
+                trim((string)$this->request->input('q', '')),
+                (string)$this->request->input('order_status', 'all'),
+                (string)$this->request->input('payment_status', 'all'),
+                max(1, (int)$this->request->input('page', 1)),
+                $redirectView,
+            );
+            return $this->redirect('orders.php' . $redirectQuery . ($redirectView > 0 ? '#order-detail' : ''));
         }
 
         $viewData = $this->pagePresenter->presentOrders($search, $orderStatusFilter, $paymentStatusFilter, $page, $viewId);
@@ -309,6 +316,30 @@ class AdminPageController extends Controller {
         }
 
         return null;
+    }
+
+    /**
+     * Build a redirect query string for admin order pages preserving filter state.
+     */
+    private function buildAdminOrderRedirectQuery(string $search, string $orderStatus, string $paymentStatus, int $page, int $viewId): string {
+        $params = [];
+        if ($search !== '') {
+            $params['q'] = $search;
+        }
+        if ($orderStatus !== '' && $orderStatus !== 'all') {
+            $params['order_status'] = $orderStatus;
+        }
+        if ($paymentStatus !== '' && $paymentStatus !== 'all') {
+            $params['payment_status'] = $paymentStatus;
+        }
+        if ($page > 1) {
+            $params['page'] = $page;
+        }
+        if ($viewId > 0) {
+            $params['view'] = $viewId;
+        }
+        $query = http_build_query($params);
+        return $query !== '' ? '?' . $query : '';
     }
 
     /**

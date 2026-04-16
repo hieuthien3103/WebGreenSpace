@@ -813,6 +813,101 @@ class Order {
     }
 
     /**
+     * Cancel one order by the owning user.
+     *
+     * Only pending orders with unpaid or failed payment can be cancelled by users.
+     */
+    public function cancelOrderByUser(int $userId, int $orderId): bool {
+        $this->clearLastError();
+
+        $this->conn->beginTransaction();
+
+        try {
+            $orderStmt = $this->conn->prepare(
+                "SELECT id, order_number, order_status, payment_status
+                 FROM {$this->table}
+                 WHERE id = :order_id
+                   AND user_id = :user_id
+                 LIMIT 1
+                 FOR UPDATE"
+            );
+            $orderStmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);
+            $orderStmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+            $orderStmt->execute();
+
+            $order = $orderStmt->fetch();
+            if (!$order) {
+                $this->conn->rollBack();
+                $this->lastErrorMessage = 'Không tìm thấy đơn hàng cần hủy.';
+                return false;
+            }
+
+            $currentStatus = (string)$order['order_status'];
+            $paymentStatus = (string)$order['payment_status'];
+
+            if ($currentStatus === 'cancelled') {
+                $this->conn->rollBack();
+                $this->lastErrorMessage = 'Đơn hàng này đã được hủy trước đó.';
+                return false;
+            }
+
+            if ($currentStatus !== 'pending') {
+                $this->conn->rollBack();
+                $this->lastErrorMessage = 'Chỉ có thể hủy đơn hàng đang ở trạng thái chờ xác nhận.';
+                return false;
+            }
+
+            if (!in_array($paymentStatus, ['unpaid', 'failed'], true)) {
+                $this->conn->rollBack();
+                $this->lastErrorMessage = 'Không thể hủy đơn hàng đang chờ duyệt thanh toán hoặc đã thanh toán. Vui lòng liên hệ hỗ trợ.';
+                return false;
+            }
+
+            if (!$this->syncInventoryForOrderStatus($orderId, (string)$order['order_number'], 'cancelled')) {
+                $this->conn->rollBack();
+                return false;
+            }
+
+            $updateStmt = $this->conn->prepare(
+                "UPDATE {$this->table}
+                 SET order_status = 'cancelled',
+                     updated_at = CURRENT_TIMESTAMP
+                 WHERE id = :order_id AND user_id = :user_id AND order_status = 'pending'"
+            );
+            $updateStmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);
+            $updateStmt->bindValue(':user_id', $userId, PDO::PARAM_INT);
+            $updateStmt->execute();
+
+            if ($updateStmt->rowCount() < 1) {
+                $this->conn->rollBack();
+                $this->lastErrorMessage = 'Không thể hủy đơn hàng lúc này. Vui lòng thử lại.';
+                return false;
+            }
+
+            $paymentNoteStmt = $this->conn->prepare(
+                "UPDATE payments
+                 SET note = CONCAT(IFNULL(note, ''), IF(note IS NULL OR note = '', '', ' | '), 'Khách hàng tự hủy đơn.')
+                 WHERE order_id = :order_id
+                 ORDER BY id DESC
+                 LIMIT 1"
+            );
+            $paymentNoteStmt->bindValue(':order_id', $orderId, PDO::PARAM_INT);
+            $paymentNoteStmt->execute();
+
+            $this->conn->commit();
+            return true;
+        } catch (Throwable $e) {
+            if ($this->conn->inTransaction()) {
+                $this->conn->rollBack();
+            }
+
+            $this->lastErrorMessage = 'Có lỗi khi hủy đơn hàng. Vui lòng thử lại sau.';
+            error_log('Order cancelOrderByUser Error: ' . $e->getMessage());
+            return false;
+        }
+    }
+
+    /**
      * Get admin order overview stats.
      */
     public function getAdminStats(): array {

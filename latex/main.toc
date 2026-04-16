@@ -1,0 +1,34 @@
+\xpg@aux {}{vietnamese}
+\contentsline {section}{Lời cảm ơn}{i}{section*.1}%
+\contentsline {section}{Nhận xét của giảng viên}{ii}{section*.2}%
+\contentsline {section}{\numberline {1}CHƯƠNG 1. TỔNG QUAN ĐỀ TÀI \& CÔNG NGHỆ}{1}{section.1}%
+\contentsline {subsection}{\numberline {1.1}Bối cảnh và lý do chọn đề tài}{1}{subsection.1.1}%
+\contentsline {subsection}{\numberline {1.2}Mục tiêu}{1}{subsection.1.2}%
+\contentsline {subsection}{\numberline {1.3}Phạm vi thực hiện}{2}{subsection.1.3}%
+\contentsline {subsection}{\numberline {1.4}Công nghệ sử dụng}{2}{subsection.1.4}%
+\contentsline {subsection}{\numberline {1.5}Kế hoạch thực hiện và phân công}{3}{subsection.1.5}%
+\contentsline {section}{\numberline {2}CHƯƠNG 2. PHÂN TÍCH \& THIẾT KẾ}{4}{section.2}%
+\contentsline {subsection}{\numberline {2.1}Phân tích hệ thống}{4}{subsection.2.1}%
+\contentsline {subsubsection}{\numberline {2.1.1}Đối tượng sử dụng}{4}{subsubsection.2.1.1}%
+\contentsline {subsubsection}{\numberline {2.1.2}Danh sách chức năng}{4}{subsubsection.2.1.2}%
+\contentsline {subsubsection}{\numberline {2.1.3}Đặc tả luồng thao tác}{6}{subsubsection.2.1.3}%
+\contentsline {subsection}{\numberline {2.2}Thiết kế giao diện \& luồng màn hình}{12}{subsection.2.2}%
+\contentsline {subsubsection}{\numberline {2.2.1}Sơ đồ sitemap / screen-flow}{12}{subsubsection.2.2.1}%
+\contentsline {subsubsection}{\numberline {2.2.2}Danh sách màn hình}{13}{subsubsection.2.2.2}%
+\contentsline {subsubsection}{\numberline {2.2.3}Screenshot giao diện}{15}{subsubsection.2.2.3}%
+\contentsline {subsection}{\numberline {2.3}Thiết kế cơ sở dữ liệu}{31}{subsection.2.3}%
+\contentsline {subsubsection}{\numberline {2.3.1}Mô hình ERD}{31}{subsubsection.2.3.1}%
+\contentsline {subsubsection}{\numberline {2.3.2}Lược đồ cơ sở dữ liệu (RDM)}{31}{subsubsection.2.3.2}%
+\contentsline {subsubsection}{\numberline {2.3.3}Data Dictionary (mô tả bảng)}{32}{subsubsection.2.3.3}%
+\contentsline {subsubsection}{\numberline {2.3.4}Quy tắc dữ liệu quan trọng}{34}{subsubsection.2.3.4}%
+\contentsline {subsubsection}{\numberline {2.3.5}Cài đặt CSDL}{35}{subsubsection.2.3.5}%
+\contentsline {subsection}{\numberline {2.4}Thiết kế xử lý \& cấu trúc source}{35}{subsection.2.4}%
+\contentsline {subsubsection}{\numberline {2.4.1}Kiến trúc thư mục \& quy ước code}{35}{subsubsection.2.4.1}%
+\contentsline {subsubsection}{\numberline {2.4.2}Thiết kế module}{37}{subsubsection.2.4.2}%
+\contentsline {subsubsection}{\numberline {2.4.3}Các truy vấn SQL tiêu biểu}{38}{subsubsection.2.4.3}%
+\contentsline {section}{\numberline {3}CHƯƠNG 3. CÀI ĐẶT -- TRIỂN KHAI -- KIỂM THỬ}{42}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Môi trường phát triển \& triển khai}{42}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Hướng dẫn cài đặt/chạy để chấm điểm}{44}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Test cases}{46}{subsection.3.3}%
+\contentsline {section}{Kết luận \& Hướng phát triển}{51}{section*.26}%
+\contentsline {section}{Phụ lục}{53}{section*.30}%

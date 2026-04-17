@@ -51,4 +51,18 @@ class AdminAuthController extends Controller {
 
         return $this->template(PUBLIC_PATH . '/admin/login.php', $this->pagePresenter->presentLogin($errors, $old, $redirectTarget));
     }
+
+    /**
+     * Log out of the admin session only.
+     */
+    public function logout(): Response {
+        if ($this->request->method() !== 'POST' || !verify_csrf_token($this->request->input('csrf_token'))) {
+            set_flash('error', 'Không thể đăng xuất từ yêu cầu này.');
+            return $this->redirect('dashboard.php');
+        }
+
+        clear_auth_session();
+        set_flash('success', 'Đã đăng xuất khỏi khu vực admin.');
+        return $this->redirect('login.php');
+    }
 }

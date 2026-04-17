@@ -7,80 +7,92 @@ if (empty($GLOBALS['mvc_template_rendering'])) {
 
 require_once __DIR__ . '/bootstrap.php';
 
-function admin_orders_query(array $params): string {
-    $filtered = [];
+if (!function_exists('admin_orders_query')) {
+    function admin_orders_query(array $params): string {
+        $filtered = [];
 
-    foreach ($params as $key => $value) {
-        if ($value === null || $value === '' || $value === 'all') {
-            continue;
+        foreach ($params as $key => $value) {
+            if ($value === null || $value === '' || $value === 'all') {
+                continue;
+            }
+
+            if ($key === 'page' && (int)$value <= 1) {
+                continue;
+            }
+
+            if ($key === 'view' && (int)$value <= 0) {
+                continue;
+            }
+
+            $filtered[$key] = $value;
         }
 
-        if ($key === 'page' && (int)$value <= 1) {
-            continue;
-        }
-
-        if ($key === 'view' && (int)$value <= 0) {
-            continue;
-        }
-
-        $filtered[$key] = $value;
-    }
-
-    $query = http_build_query($filtered);
-    return $query !== '' ? '?' . $query : '';
-}
-
-function admin_render_order_state_fields(array $params): void {
-    foreach ($params as $key => $value) {
-        if ($value === null || $value === '') {
-            continue;
-        }
-
-        echo '<input type="hidden" name="' . clean((string)$key) . '" value="' . clean((string)$value) . '">';
+        $query = http_build_query($filtered);
+        return $query !== '' ? '?' . $query : '';
     }
 }
 
-function admin_order_payment_status_meta(string $status): array {
-    return match ($status) {
-        'paid' => ['label' => 'Đã thanh toán', 'class' => 'bg-[#edf8f1] text-[#2e9b63]'],
-        'pending_review' => ['label' => 'Chờ duyệt', 'class' => 'bg-[#fff7e8] text-[#b7791f]'],
-        'failed' => ['label' => 'Thanh toán lỗi', 'class' => 'bg-[#fdecec] text-[#c43d3d]'],
-        default => ['label' => 'Chưa thanh toán', 'class' => 'bg-[#f2f4f3] text-[#5d6d63]'],
-    };
+if (!function_exists('admin_render_order_state_fields')) {
+    function admin_render_order_state_fields(array $params): void {
+        foreach ($params as $key => $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            echo '<input type="hidden" name="' . clean((string)$key) . '" value="' . clean((string)$value) . '">';
+        }
+    }
 }
 
-function admin_order_status_meta(string $status): array {
-    return match ($status) {
-        'pending' => ['label' => 'Chờ xác nhận', 'class' => 'bg-[#fff7e8] text-[#b7791f]'],
-        'confirmed' => ['label' => 'Đã xác nhận', 'class' => 'bg-[#edf8f1] text-[#2e9b63]'],
-        'processing' => ['label' => 'Đang chuẩn bị', 'class' => 'bg-[#eef4ff] text-[#3758c7]'],
-        'shipping' => ['label' => 'Đang giao', 'class' => 'bg-[#eef6ff] text-[#2563eb]'],
-        'delivered' => ['label' => 'Đã giao', 'class' => 'bg-[#eafaf0] text-[#157347]'],
-        'cancelled' => ['label' => 'Đã hủy', 'class' => 'bg-[#fdecec] text-[#c43d3d]'],
-        default => ['label' => ucfirst($status), 'class' => 'bg-[#f2f4f3] text-[#5d6d63]'],
-    };
+if (!function_exists('admin_order_payment_status_meta')) {
+    function admin_order_payment_status_meta(string $status): array {
+        return match ($status) {
+            'paid' => ['label' => 'Đã thanh toán', 'class' => 'bg-[#edf8f1] text-[#2e9b63]'],
+            'pending_review' => ['label' => 'Chờ duyệt', 'class' => 'bg-[#fff7e8] text-[#b7791f]'],
+            'failed' => ['label' => 'Thanh toán lỗi', 'class' => 'bg-[#fdecec] text-[#c43d3d]'],
+            default => ['label' => 'Chưa thanh toán', 'class' => 'bg-[#f2f4f3] text-[#5d6d63]'],
+        };
+    }
 }
 
-function admin_order_status_options(): array {
-    return [
-        'all' => 'Tất cả trạng thái đơn',
-        'pending' => 'Chờ xác nhận',
-        'confirmed' => 'Đã xác nhận',
-        'processing' => 'Đang chuẩn bị',
-        'shipping' => 'Đang giao',
-        'delivered' => 'Đã giao',
-        'cancelled' => 'Đã hủy',
-    ];
+if (!function_exists('admin_order_status_meta')) {
+    function admin_order_status_meta(string $status): array {
+        return match ($status) {
+            'pending' => ['label' => 'Chờ xác nhận', 'class' => 'bg-[#fff7e8] text-[#b7791f]'],
+            'confirmed' => ['label' => 'Đã xác nhận', 'class' => 'bg-[#edf8f1] text-[#2e9b63]'],
+            'processing' => ['label' => 'Đang chuẩn bị', 'class' => 'bg-[#eef4ff] text-[#3758c7]'],
+            'shipping' => ['label' => 'Đang giao', 'class' => 'bg-[#eef6ff] text-[#2563eb]'],
+            'delivered' => ['label' => 'Đã giao', 'class' => 'bg-[#eafaf0] text-[#157347]'],
+            'cancelled' => ['label' => 'Đã hủy', 'class' => 'bg-[#fdecec] text-[#c43d3d]'],
+            default => ['label' => ucfirst($status), 'class' => 'bg-[#f2f4f3] text-[#5d6d63]'],
+        };
+    }
 }
 
-function admin_payment_status_options(): array {
-    return [
-        'all' => 'Tất cả thanh toán',
-        'unpaid' => 'Chưa thanh toán',
-        'pending_review' => 'Chờ duyệt',
-        'paid' => 'Đã thanh toán',
-        'failed' => 'Thanh toán lỗi',
-    ];
+if (!function_exists('admin_order_status_options')) {
+    function admin_order_status_options(): array {
+        return [
+            'all' => 'Tất cả trạng thái đơn',
+            'pending' => 'Chờ xác nhận',
+            'confirmed' => 'Đã xác nhận',
+            'processing' => 'Đang chuẩn bị',
+            'shipping' => 'Đang giao',
+            'delivered' => 'Đã giao',
+            'cancelled' => 'Đã hủy',
+        ];
+    }
+}
+
+if (!function_exists('admin_payment_status_options')) {
+    function admin_payment_status_options(): array {
+        return [
+            'all' => 'Tất cả thanh toán',
+            'unpaid' => 'Chưa thanh toán',
+            'pending_review' => 'Chờ duyệt',
+            'paid' => 'Đã thanh toán',
+            'failed' => 'Thanh toán lỗi',
+        ];
+    }
 }
 
 render_admin_header('Quản lý đơn hàng');
@@ -641,16 +653,16 @@ const currencyFormatter = new Intl.NumberFormat('vi-VN', {
 });
 const numberFormatter = new Intl.NumberFormat('vi-VN');
 
-function escapeHtml(value) {
+const escapeHtml = (value) => {
     return String(value)
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
-}
+};
 
-function buildRevenueChartSvg(points) {
+const buildRevenueChartSvg = (points) => {
     if (!points.length) {
         return '<div class="rounded-[1.25rem] border border-dashed border-[#d9e9de] px-4 py-10 text-center text-sm text-[#6e8d7b]">Chưa có dữ liệu doanh thu trong kỳ này.</div>';
     }
@@ -719,9 +731,9 @@ function buildRevenueChartSvg(points) {
             ${labels}
         </svg>
     `;
-}
+};
 
-function buildUnitsChartSvg(points) {
+const buildUnitsChartSvg = (points) => {
     if (!points.length) {
         return '<div class="rounded-[1.25rem] border border-dashed border-[#d9e9de] px-4 py-10 text-center text-sm text-[#6e8d7b]">Chưa có dữ liệu số lượng bán trong kỳ này.</div>';
     }
@@ -772,9 +784,9 @@ function buildUnitsChartSvg(points) {
             ${bars}
         </svg>
     `;
-}
+};
 
-function renderCommerceTrend(period) {
+const renderCommerceTrend = (period) => {
     const trend = commerceTrendData?.[period];
     if (!trend || !Array.isArray(trend.points)) {
         return;
@@ -816,7 +828,7 @@ function renderCommerceTrend(period) {
         button.classList.toggle('text-[#102118]', !isActive);
         button.classList.toggle('text-[#587766]', !isActive);
     });
-}
+};
 
 trendPeriodButtons.forEach((button) => {
     button.addEventListener('click', () => {

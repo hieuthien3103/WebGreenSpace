@@ -7,122 +7,136 @@ if (empty($GLOBALS['mvc_template_rendering'])) {
 
 require_once __DIR__ . '/bootstrap.php';
 
-function admin_product_defaults(): array {
-    return [
-        'category_id' => '',
-        'name' => '',
-        'slug' => '',
-        'description' => '',
-        'price' => '',
-        'sale_price' => '',
-        'stock' => '0',
-        'image' => '',
-        'size' => '',
-        'care_level' => 'medium',
-        'light_requirement' => 'medium',
-        'water_requirement' => 'medium',
-        'featured' => '0',
-        'status' => 'active',
-    ];
-}
-
-function admin_collect_product_form_data(array $input): array {
-    return [
-        'category_id' => trim((string)($input['category_id'] ?? '')),
-        'name' => trim((string)($input['name'] ?? '')),
-        'slug' => trim((string)($input['slug'] ?? '')),
-        'description' => trim((string)($input['description'] ?? '')),
-        'price' => trim((string)($input['price'] ?? '')),
-        'sale_price' => trim((string)($input['sale_price'] ?? '')),
-        'stock' => trim((string)($input['stock'] ?? '0')),
-        'image' => trim((string)($input['image'] ?? '')),
-        'size' => trim((string)($input['size'] ?? '')),
-        'care_level' => trim((string)($input['care_level'] ?? 'medium')),
-        'light_requirement' => trim((string)($input['light_requirement'] ?? 'medium')),
-        'water_requirement' => trim((string)($input['water_requirement'] ?? 'medium')),
-        'featured' => !empty($input['featured']) ? '1' : '0',
-        'status' => trim((string)($input['status'] ?? 'active')),
-    ];
-}
-
-function admin_normalize_decimal(string $value): ?string {
-    $value = trim(str_replace([' ', ','], ['', ''], $value));
-    if ($value === '') {
-        return null;
+if (!function_exists('admin_product_defaults')) {
+    function admin_product_defaults(): array {
+        return [
+            'category_id' => '',
+            'name' => '',
+            'slug' => '',
+            'description' => '',
+            'price' => '',
+            'sale_price' => '',
+            'stock' => '0',
+            'image' => '',
+            'size' => '',
+            'care_level' => 'medium',
+            'light_requirement' => 'medium',
+            'water_requirement' => 'medium',
+            'featured' => '0',
+            'status' => 'active',
+        ];
     }
-
-    return is_numeric($value) ? (string)(float)$value : null;
 }
 
-function admin_generate_unique_product_slug(Product $productModel, string $baseSlug, ?int $excludeId = null): string {
-    $baseSlug = trim($baseSlug, '-');
-    if ($baseSlug === '') {
-        $baseSlug = 'san-pham';
+if (!function_exists('admin_collect_product_form_data')) {
+    function admin_collect_product_form_data(array $input): array {
+        return [
+            'category_id' => trim((string)($input['category_id'] ?? '')),
+            'name' => trim((string)($input['name'] ?? '')),
+            'slug' => trim((string)($input['slug'] ?? '')),
+            'description' => trim((string)($input['description'] ?? '')),
+            'price' => trim((string)($input['price'] ?? '')),
+            'sale_price' => trim((string)($input['sale_price'] ?? '')),
+            'stock' => trim((string)($input['stock'] ?? '0')),
+            'image' => trim((string)($input['image'] ?? '')),
+            'size' => trim((string)($input['size'] ?? '')),
+            'care_level' => trim((string)($input['care_level'] ?? 'medium')),
+            'light_requirement' => trim((string)($input['light_requirement'] ?? 'medium')),
+            'water_requirement' => trim((string)($input['water_requirement'] ?? 'medium')),
+            'featured' => !empty($input['featured']) ? '1' : '0',
+            'status' => trim((string)($input['status'] ?? 'active')),
+        ];
     }
-
-    $slug = $baseSlug;
-    $suffix = 2;
-
-    while ($productModel->slugExists($slug, $excludeId)) {
-        $slug = $baseSlug . '-' . $suffix;
-        $suffix++;
-    }
-
-    return $slug;
 }
 
-function admin_products_query(array $params): string {
-    $filtered = [];
-
-    foreach ($params as $key => $value) {
-        if ($value === null || $value === '') {
-            continue;
+if (!function_exists('admin_normalize_decimal')) {
+    function admin_normalize_decimal(string $value): ?string {
+        $value = trim(str_replace([' ', ','], ['', ''], $value));
+        if ($value === '') {
+            return null;
         }
 
-        $filtered[$key] = $value;
+        return is_numeric($value) ? (string)(float)$value : null;
     }
-
-    $query = http_build_query($filtered);
-    return $query !== '' ? '?' . $query : '';
 }
 
-function admin_product_uploaded_file_present(array $file): bool {
-    return isset($file['error']) && (int)$file['error'] !== UPLOAD_ERR_NO_FILE;
+if (!function_exists('admin_generate_unique_product_slug')) {
+    function admin_generate_unique_product_slug(Product $productModel, string $baseSlug, ?int $excludeId = null): string {
+        $baseSlug = trim($baseSlug, '-');
+        if ($baseSlug === '') {
+            $baseSlug = 'san-pham';
+        }
+
+        $slug = $baseSlug;
+        $suffix = 2;
+
+        while ($productModel->slugExists($slug, $excludeId)) {
+            $slug = $baseSlug . '-' . $suffix;
+            $suffix++;
+        }
+
+        return $slug;
+    }
 }
 
-function admin_store_uploaded_product_image(array $file): array {
-    $validation = validate_uploaded_image($file);
-    if (empty($validation['valid'])) {
+if (!function_exists('admin_products_query')) {
+    function admin_products_query(array $params): string {
+        $filtered = [];
+
+        foreach ($params as $key => $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $filtered[$key] = $value;
+        }
+
+        $query = http_build_query($filtered);
+        return $query !== '' ? '?' . $query : '';
+    }
+}
+
+if (!function_exists('admin_product_uploaded_file_present')) {
+    function admin_product_uploaded_file_present(array $file): bool {
+        return isset($file['error']) && (int)$file['error'] !== UPLOAD_ERR_NO_FILE;
+    }
+}
+
+if (!function_exists('admin_store_uploaded_product_image')) {
+    function admin_store_uploaded_product_image(array $file): array {
+        $validation = validate_uploaded_image($file);
+        if (empty($validation['valid'])) {
+            return [
+                'success' => false,
+                'error' => (string)($validation['error'] ?? 'Ảnh tải lên không hợp lệ.'),
+            ];
+        }
+
+        $uploadDir = __DIR__ . '/../../uploads/products/';
+        if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
+            return [
+                'success' => false,
+                'error' => 'Không thể tạo thư mục lưu ảnh.',
+            ];
+        }
+
+        $extension = (string)($validation['extension'] ?? 'jpg');
+        $newFileName = 'product_' . date('YmdHis') . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
+        $uploadPath = $uploadDir . $newFileName;
+        $imagePath = 'products/' . $newFileName;
+
+        if (!move_uploaded_file((string)$file['tmp_name'], $uploadPath)) {
+            return [
+                'success' => false,
+                'error' => 'Không thể lưu file ảnh đã tải lên.',
+            ];
+        }
+
         return [
-            'success' => false,
-            'error' => (string)($validation['error'] ?? 'Ảnh tải lên không hợp lệ.'),
+            'success' => true,
+            'path' => $imagePath,
         ];
     }
-
-    $uploadDir = __DIR__ . '/../../uploads/products/';
-    if (!is_dir($uploadDir) && !mkdir($uploadDir, 0755, true) && !is_dir($uploadDir)) {
-        return [
-            'success' => false,
-            'error' => 'Không thể tạo thư mục lưu ảnh.',
-        ];
-    }
-
-    $extension = (string)($validation['extension'] ?? 'jpg');
-    $newFileName = 'product_' . date('YmdHis') . '_' . bin2hex(random_bytes(4)) . '.' . $extension;
-    $uploadPath = $uploadDir . $newFileName;
-    $imagePath = 'products/' . $newFileName;
-
-    if (!move_uploaded_file((string)$file['tmp_name'], $uploadPath)) {
-        return [
-            'success' => false,
-            'error' => 'Không thể lưu file ảnh đã tải lên.',
-        ];
-    }
-
-    return [
-        'success' => true,
-        'path' => $imagePath,
-    ];
 }
 
 render_admin_header('Quản lý sản phẩm');

@@ -7,98 +7,110 @@ if (empty($GLOBALS['mvc_template_rendering'])) {
 
 require_once __DIR__ . '/bootstrap.php';
 
-function admin_user_defaults(): array {
-    return [
-        'username' => '',
-        'email' => '',
-        'full_name' => '',
-        'phone' => '',
-        'role' => 'user',
-        'admin_permissions' => [],
-        'status' => 'active',
-    ];
+if (!function_exists('admin_user_defaults')) {
+    function admin_user_defaults(): array {
+        return [
+            'username' => '',
+            'email' => '',
+            'full_name' => '',
+            'phone' => '',
+            'role' => 'user',
+            'admin_permissions' => [],
+            'status' => 'active',
+        ];
+    }
 }
 
-function admin_collect_user_form_data(array $input): array {
-    return [
-        'username' => trim((string)($input['username'] ?? '')),
-        'email' => strtolower(trim((string)($input['email'] ?? ''))),
-        'full_name' => trim((string)($input['full_name'] ?? '')),
-        'phone' => trim((string)($input['phone'] ?? '')),
-        'role' => trim((string)($input['role'] ?? 'user')),
-        'admin_permissions' => normalize_admin_permissions($input['admin_permissions'] ?? []),
-        'status' => trim((string)($input['status'] ?? 'active')),
-    ];
+if (!function_exists('admin_collect_user_form_data')) {
+    function admin_collect_user_form_data(array $input): array {
+        return [
+            'username' => trim((string)($input['username'] ?? '')),
+            'email' => strtolower(trim((string)($input['email'] ?? ''))),
+            'full_name' => trim((string)($input['full_name'] ?? '')),
+            'phone' => trim((string)($input['phone'] ?? '')),
+            'role' => trim((string)($input['role'] ?? 'user')),
+            'admin_permissions' => normalize_admin_permissions($input['admin_permissions'] ?? []),
+            'status' => trim((string)($input['status'] ?? 'active')),
+        ];
+    }
 }
 
-function admin_users_query(array $params): string {
-    $filtered = [];
+if (!function_exists('admin_users_query')) {
+    function admin_users_query(array $params): string {
+        $filtered = [];
 
-    foreach ($params as $key => $value) {
-        if ($value === null || $value === '') {
-            continue;
+        foreach ($params as $key => $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $filtered[$key] = $value;
         }
 
-        $filtered[$key] = $value;
+        $query = http_build_query($filtered);
+        return $query !== '' ? '?' . $query : '';
     }
-
-    $query = http_build_query($filtered);
-    return $query !== '' ? '?' . $query : '';
 }
 
-function admin_user_role_meta(string $role): array {
-    return match ($role) {
-        'admin' => [
-            'label' => 'Admin',
-            'class' => 'bg-[#eef6f1] text-[#2e9b63]',
-        ],
-        default => [
-            'label' => 'User',
-            'class' => 'bg-[#f4f1ff] text-[#6b4eff]',
-        ],
-    };
+if (!function_exists('admin_user_role_meta')) {
+    function admin_user_role_meta(string $role): array {
+        return match ($role) {
+            'admin' => [
+                'label' => 'Admin',
+                'class' => 'bg-[#eef6f1] text-[#2e9b63]',
+            ],
+            default => [
+                'label' => 'User',
+                'class' => 'bg-[#f4f1ff] text-[#6b4eff]',
+            ],
+        };
+    }
 }
 
-function admin_user_status_meta(string $status): array {
-    return match ($status) {
-        'inactive' => [
-            'label' => 'Đã khóa',
-            'class' => 'bg-[#fff3e8] text-[#b56a16]',
-        ],
-        default => [
-            'label' => 'Đang hoạt động',
-            'class' => 'bg-[#eef6f1] text-[#456a57]',
-        ],
-    };
+if (!function_exists('admin_user_status_meta')) {
+    function admin_user_status_meta(string $status): array {
+        return match ($status) {
+            'inactive' => [
+                'label' => 'Đã khóa',
+                'class' => 'bg-[#fff3e8] text-[#b56a16]',
+            ],
+            default => [
+                'label' => 'Đang hoạt động',
+                'class' => 'bg-[#eef6f1] text-[#456a57]',
+            ],
+        };
+    }
 }
 
-function admin_user_permission_summary(array $user, array $permissionOptions): ?string {
-    if (($user['role'] ?? 'user') !== 'admin') {
-        return null;
-    }
-
-    if (!empty($user['has_full_admin_access'])) {
-        return 'Toàn quyền quản trị';
-    }
-
-    $labels = [];
-    foreach (normalize_admin_permissions($user['admin_permissions'] ?? []) as $permission) {
-        if ($permission === 'admin.full_access') {
-            continue;
+if (!function_exists('admin_user_permission_summary')) {
+    function admin_user_permission_summary(array $user, array $permissionOptions): ?string {
+        if (($user['role'] ?? 'user') !== 'admin') {
+            return null;
         }
-        $labels[] = $permissionOptions[$permission]['label'] ?? $permission;
-    }
 
-    if ($labels === []) {
-        return 'Chưa cấp quyền';
-    }
+        if (!empty($user['has_full_admin_access'])) {
+            return 'Toàn quyền quản trị';
+        }
 
-    $summary = implode(', ', array_slice($labels, 0, 2));
-    if (count($labels) > 2) {
-        $summary .= ' +' . (count($labels) - 2) . ' quyền';
-    }
+        $labels = [];
+        foreach (normalize_admin_permissions($user['admin_permissions'] ?? []) as $permission) {
+            if ($permission === 'admin.full_access') {
+                continue;
+            }
+            $labels[] = $permissionOptions[$permission]['label'] ?? $permission;
+        }
 
-    return $summary;
+        if ($labels === []) {
+            return 'Chưa cấp quyền';
+        }
+
+        $summary = implode(', ', array_slice($labels, 0, 2));
+        if (count($labels) > 2) {
+            $summary .= ' +' . (count($labels) - 2) . ' quyền';
+        }
+
+        return $summary;
+    }
 }
 
 render_admin_header('Quản lý user');

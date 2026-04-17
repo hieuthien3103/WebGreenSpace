@@ -49,7 +49,17 @@ define('UPLOAD_URL', APP_URL . '/uploads');
 // Session Configuration
 define('SESSION_LIFETIME', 7200); // 2 hours
 ini_set('session.gc_maxlifetime', SESSION_LIFETIME);
+
+// Separate session cookies for admin vs public so a user and an admin
+// can stay logged in simultaneously in the same browser.
+$__wgsScriptName = (string)($_SERVER['SCRIPT_NAME'] ?? $_SERVER['PHP_SELF'] ?? '');
+$__wgsRequestUri = (string)($_SERVER['REQUEST_URI'] ?? '');
+$__wgsIsAdminContext = str_contains($__wgsScriptName, '/admin/')
+    || preg_match('#(^|/)admin(/|$)#', (string)parse_url($__wgsRequestUri, PHP_URL_PATH)) === 1;
+define('ADMIN_SESSION_CONTEXT', $__wgsIsAdminContext);
+session_name($__wgsIsAdminContext ? 'WGS_ADMIN_SID' : 'WGS_USER_SID');
 session_set_cookie_params(SESSION_LIFETIME);
+unset($__wgsScriptName, $__wgsRequestUri, $__wgsIsAdminContext);
 
 // Order Expiry Configuration
 define('ORDER_PENDING_ONLINE_MOCK_EXPIRY_MINUTES', max(5, (int)(getenv('ORDER_PENDING_ONLINE_MOCK_EXPIRY_MINUTES') ?: 30)));

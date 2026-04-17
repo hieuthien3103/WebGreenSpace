@@ -7,58 +7,66 @@ if (empty($GLOBALS['mvc_template_rendering'])) {
 
 require_once __DIR__ . '/bootstrap.php';
 
-function admin_category_defaults(): array {
-    return [
-        'name' => '',
-        'slug' => '',
-        'description' => '',
-        'image' => '',
-        'parent_id' => '',
-        'status' => 'active',
-    ];
-}
-
-function admin_collect_category_form_data(array $input): array {
-    return [
-        'name' => trim((string)($input['name'] ?? '')),
-        'slug' => trim((string)($input['slug'] ?? '')),
-        'description' => trim((string)($input['description'] ?? '')),
-        'image' => trim((string)($input['image'] ?? '')),
-        'parent_id' => trim((string)($input['parent_id'] ?? '')),
-        'status' => trim((string)($input['status'] ?? 'active')),
-    ];
-}
-
-function admin_generate_unique_category_slug(Category $categoryModel, string $baseSlug, ?int $excludeId = null): string {
-    $baseSlug = trim($baseSlug, '-');
-    if ($baseSlug === '') {
-        $baseSlug = 'danh-muc';
+if (!function_exists('admin_category_defaults')) {
+    function admin_category_defaults(): array {
+        return [
+            'name' => '',
+            'slug' => '',
+            'description' => '',
+            'image' => '',
+            'parent_id' => '',
+            'status' => 'active',
+        ];
     }
-
-    $slug = $baseSlug;
-    $suffix = 2;
-
-    while ($categoryModel->slugExists($slug, $excludeId)) {
-        $slug = $baseSlug . '-' . $suffix;
-        $suffix++;
-    }
-
-    return $slug;
 }
 
-function admin_categories_query(array $params): string {
-    $filtered = [];
+if (!function_exists('admin_collect_category_form_data')) {
+    function admin_collect_category_form_data(array $input): array {
+        return [
+            'name' => trim((string)($input['name'] ?? '')),
+            'slug' => trim((string)($input['slug'] ?? '')),
+            'description' => trim((string)($input['description'] ?? '')),
+            'image' => trim((string)($input['image'] ?? '')),
+            'parent_id' => trim((string)($input['parent_id'] ?? '')),
+            'status' => trim((string)($input['status'] ?? 'active')),
+        ];
+    }
+}
 
-    foreach ($params as $key => $value) {
-        if ($value === null || $value === '') {
-            continue;
+if (!function_exists('admin_generate_unique_category_slug')) {
+    function admin_generate_unique_category_slug(Category $categoryModel, string $baseSlug, ?int $excludeId = null): string {
+        $baseSlug = trim($baseSlug, '-');
+        if ($baseSlug === '') {
+            $baseSlug = 'danh-muc';
         }
 
-        $filtered[$key] = $value;
-    }
+        $slug = $baseSlug;
+        $suffix = 2;
 
-    $query = http_build_query($filtered);
-    return $query !== '' ? '?' . $query : '';
+        while ($categoryModel->slugExists($slug, $excludeId)) {
+            $slug = $baseSlug . '-' . $suffix;
+            $suffix++;
+        }
+
+        return $slug;
+    }
+}
+
+if (!function_exists('admin_categories_query')) {
+    function admin_categories_query(array $params): string {
+        $filtered = [];
+
+        foreach ($params as $key => $value) {
+            if ($value === null || $value === '') {
+                continue;
+            }
+
+            $filtered[$key] = $value;
+        }
+
+        $query = http_build_query($filtered);
+        return $query !== '' ? '?' . $query : '';
+    }
 }
 
 render_admin_header('Quản lý danh mục');

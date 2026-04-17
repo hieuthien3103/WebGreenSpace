@@ -26,8 +26,7 @@ foreach ($legacyTargets as $target) {
 $requiredTargets = [
     "base_url()",
     "base_url('profile')",
-    "base_url('logout')",
-    'name="redirect" value="<?= clean(\'admin/login.php\') ?>"',
+    "admin_path('logout.php')",
 ];
 
 foreach ($requiredTargets as $target) {

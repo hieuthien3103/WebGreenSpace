@@ -6,6 +6,7 @@ class AdminRouteRegistrar implements RouteRegistrar {
     public function register(Router $router): void {
         $router->get('/admin/login', [AdminAuthController::class, 'login']);
         $router->post('/admin/login', [AdminAuthController::class, 'login']);
+        $router->post('/admin/logout', [AdminAuthController::class, 'logout']);
         $router->get('/admin', [AdminPageController::class, 'index']);
         $router->get('/admin/dashboard', [AdminPageController::class, 'dashboard']);
         $router->get('/admin/orders', [AdminPageController::class, 'orders']);

@@ -17,19 +17,19 @@
 \contentsline {subsubsection}{\numberline {2.2.1}Sơ đồ sitemap / screen-flow}{13}{subsubsection.2.2.1}%
 \contentsline {subsubsection}{\numberline {2.2.2}Danh sách màn hình}{16}{subsubsection.2.2.2}%
 \contentsline {subsubsection}{\numberline {2.2.3}Screenshot giao diện}{17}{subsubsection.2.2.3}%
-\contentsline {subsection}{\numberline {2.3}Thiết kế cơ sở dữ liệu}{42}{subsection.2.3}%
-\contentsline {subsubsection}{\numberline {2.3.1}Mô hình ERD}{42}{subsubsection.2.3.1}%
-\contentsline {subsubsection}{\numberline {2.3.2}Lược đồ cơ sở dữ liệu (RDM)}{42}{subsubsection.2.3.2}%
-\contentsline {subsubsection}{\numberline {2.3.3}Data Dictionary (mô tả bảng)}{43}{subsubsection.2.3.3}%
-\contentsline {subsubsection}{\numberline {2.3.4}Quy tắc dữ liệu quan trọng}{47}{subsubsection.2.3.4}%
-\contentsline {subsubsection}{\numberline {2.3.5}Cài đặt CSDL}{48}{subsubsection.2.3.5}%
-\contentsline {subsection}{\numberline {2.4}Thiết kế xử lý \& cấu trúc source}{48}{subsection.2.4}%
-\contentsline {subsubsection}{\numberline {2.4.1}Kiến trúc thư mục \& quy ước code}{48}{subsubsection.2.4.1}%
-\contentsline {subsubsection}{\numberline {2.4.2}Thiết kế module}{50}{subsubsection.2.4.2}%
-\contentsline {subsubsection}{\numberline {2.4.3}Các truy vấn SQL tiêu biểu}{51}{subsubsection.2.4.3}%
-\contentsline {section}{\numberline {3}CHƯƠNG 3. CÀI ĐẶT -- TRIỂN KHAI -- KIỂM THỬ}{55}{section.3}%
-\contentsline {subsection}{\numberline {3.1}Môi trường phát triển \& triển khai}{55}{subsection.3.1}%
-\contentsline {subsection}{\numberline {3.2}Hướng dẫn cài đặt/chạy để chấm điểm}{57}{subsection.3.2}%
-\contentsline {subsection}{\numberline {3.3}Test cases}{59}{subsection.3.3}%
-\contentsline {section}{Kết luận \& Hướng phát triển}{63}{section*.36}%
-\contentsline {section}{Phụ lục}{65}{section*.40}%
+\contentsline {subsection}{\numberline {2.3}Thiết kế cơ sở dữ liệu}{44}{subsection.2.3}%
+\contentsline {subsubsection}{\numberline {2.3.1}Mô hình ERD}{44}{subsubsection.2.3.1}%
+\contentsline {subsubsection}{\numberline {2.3.2}Lược đồ cơ sở dữ liệu (RDM)}{44}{subsubsection.2.3.2}%
+\contentsline {subsubsection}{\numberline {2.3.3}Data Dictionary (mô tả bảng)}{45}{subsubsection.2.3.3}%
+\contentsline {subsubsection}{\numberline {2.3.4}Quy tắc dữ liệu quan trọng}{53}{subsubsection.2.3.4}%
+\contentsline {subsubsection}{\numberline {2.3.5}Cài đặt CSDL}{54}{subsubsection.2.3.5}%
+\contentsline {subsection}{\numberline {2.4}Thiết kế xử lý \& cấu trúc source}{55}{subsection.2.4}%
+\contentsline {subsubsection}{\numberline {2.4.1}Kiến trúc thư mục \& quy ước code}{55}{subsubsection.2.4.1}%
+\contentsline {subsubsection}{\numberline {2.4.2}Thiết kế module}{57}{subsubsection.2.4.2}%
+\contentsline {subsubsection}{\numberline {2.4.3}Các truy vấn SQL tiêu biểu}{60}{subsubsection.2.4.3}%
+\contentsline {section}{\numberline {3}CHƯƠNG 3. CÀI ĐẶT -- TRIỂN KHAI -- KIỂM THỬ}{64}{section.3}%
+\contentsline {subsection}{\numberline {3.1}Môi trường phát triển \& triển khai}{64}{subsection.3.1}%
+\contentsline {subsection}{\numberline {3.2}Hướng dẫn cài đặt/chạy để chấm điểm}{66}{subsection.3.2}%
+\contentsline {subsection}{\numberline {3.3}Test cases}{68}{subsection.3.3}%
+\contentsline {section}{Kết luận \& Hướng phát triển}{72}{section*.36}%
+\contentsline {section}{Phụ lục}{74}{section*.40}%
